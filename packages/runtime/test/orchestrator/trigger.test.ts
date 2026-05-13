@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
 import { Database } from 'bun:sqlite'
 import { join } from 'node:path'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { makeTempRepo, type TempRepo } from '../helpers/temp-repo'
 import { LocalWorktreeProvider } from '@legion/runtime/workspace/local-worktree-provider'
@@ -84,5 +84,41 @@ describe('triggerWorkflow', () => {
     expect(history.length).toBeGreaterThanOrEqual(2) // init + message at minimum
     expect(history.some((e) => e.type === 'message')).toBe(true)
     expect(store.get(result.workflowInstanceId)?.status).toBe('completed')
+  })
+
+  test('runs .legion.yaml setup hook after creating worktree', async () => {
+    // write a .legion.yaml to repo
+    await Bun.write(
+      join(repo.path, '.legion.yaml'),
+      'worktree:\n  setup:\n    - echo hello > setup-marker.txt\n',
+    )
+    // commit it (worktrees need a clean ref)
+    const { $ } = await import('bun')
+    await $`git add .legion.yaml`.cwd(repo.path).quiet()
+    await $`git commit -m legion-config`.cwd(repo.path).quiet()
+    const wt = new LocalWorktreeProvider({ repoPath: repo.path, baseDir })
+    const queryMock = (): AsyncIterable<unknown> =>
+      (async function* () {
+        yield { type: 'result', subtype: 'success' }
+      })()
+    const adapter = new ClaudeCodeAgentSDKProvider({ query: queryMock })
+    const store = new InstanceStore(db)
+    const log = new EventLog(db)
+    const result = await triggerWorkflow({
+      template: TEMPLATE,
+      userPrompt: 'x',
+      repoPath: repo.path,
+      baseRef: 'HEAD',
+      workspaceProvider: wt,
+      adapter,
+      instanceStore: store,
+      eventLog: log,
+    })
+    await new Promise((r) => setTimeout(r, 50))
+    // The worktree path is the per-instance directory; marker should be there
+    const worktreePath = (await wt.list(result.workflowInstanceId))[0]?.path
+    expect(worktreePath).toBeDefined()
+    const marker = await readFile(join(worktreePath!, 'setup-marker.txt'), 'utf-8')
+    expect(marker.trim()).toBe('hello')
   })
 })

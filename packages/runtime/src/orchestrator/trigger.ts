@@ -5,6 +5,8 @@ import type { InstanceStore } from './instance-store'
 import type { WorkspaceProvider } from '../workspace/provider'
 import { resolveCommitSha } from '../workspace/git'
 import { firstRoleNode, buildInitialPrompt } from './spawn-agent'
+import { loadLegionConfig } from '../config/loader'
+import { runWorktreeSetup } from '../config/setup-runner'
 
 export interface TriggerInput {
   template: WorkflowTemplate
@@ -38,6 +40,12 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
     role: role.role,
     seq: 1,
     baseCommitSha,
+  })
+  const config = await loadLegionConfig(input.repoPath)
+  await runWorktreeSetup({
+    mainRepoPath: input.repoPath,
+    worktreePath: workspace.path,
+    config,
   })
   const handle = await input.adapter.launch({
     workdir: workspace.path,
