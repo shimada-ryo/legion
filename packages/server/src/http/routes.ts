@@ -2,6 +2,11 @@
 type BunServer = import('bun').Server<any>
 import type { AppRuntime } from '../app'
 import { handleTemplates } from './handlers/templates'
+import {
+  handleInstancesList,
+  handleInstanceDetail,
+  handleWorkflowsTrigger,
+} from './handlers/instances'
 
 export function route(
   req: Request,
@@ -13,5 +18,13 @@ export function route(
   if (path === '/templates' || path.startsWith('/templates/')) {
     return handleTemplates(req, ctx)
   }
+  if (path === '/workflows/trigger') {
+    return handleWorkflowsTrigger(req, ctx)
+  }
+  if (path === '/instances') {
+    return handleInstancesList(req, ctx)
+  }
+  const m = path.match(/^\/instances\/([^/]+)$/)
+  if (m) return handleInstanceDetail(m[1]!, ctx)
   return new Response('Not Found', { status: 404 })
 }
