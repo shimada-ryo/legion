@@ -63,6 +63,7 @@ export interface WorkflowInstance {
   id: string
   templateId: string
   templateSnapshot: WorkflowTemplate
+  baseCommitSha: string
   status: WorkflowInstanceStatus
   agentInstances: AgentInstance[]
   blackboardChannels: BlackboardChannelState[]

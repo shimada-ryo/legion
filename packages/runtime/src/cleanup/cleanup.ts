@@ -9,11 +9,12 @@ export type Classification =
 export async function classifyForCleanup(
   repoCwd: string,
   desc: WorkspaceDescriptor,
+  baseRef = 'main',
 ): Promise<Classification> {
   const branch = (desc.ref as { branch?: string }).branch
   if (!branch) return { kind: 'safe' }
   if (!(await branchExists(repoCwd, branch))) return { kind: 'safe' }
-  const aheadProc = await $`git rev-list --count main..${branch}`
+  const aheadProc = await $`git rev-list --count ${baseRef}..${branch}`
     .cwd(repoCwd)
     .quiet()
     .nothrow()
@@ -35,6 +36,8 @@ export interface RunCleanupInput {
    */
   mode: 'safe-only' | 'confirm-each'
   workflowInstanceId?: string
+  /** Base ref used to determine whether a branch has unmerged commits. Defaults to 'main'. */
+  baseRef?: string
   onConfirm?: (desc: WorkspaceDescriptor, reason: string) => Promise<boolean>
 }
 
@@ -48,7 +51,7 @@ export async function runCleanup(input: RunCleanupInput): Promise<RunCleanupResu
   const removed: WorkspaceDescriptor[] = []
   const skipped: { desc: WorkspaceDescriptor; reason: string }[] = []
   for (const desc of list) {
-    const c = await classifyForCleanup(input.repoPath, desc)
+    const c = await classifyForCleanup(input.repoPath, desc, input.baseRef)
     if (c.kind === 'safe') {
       await removeOne(input, desc)
       removed.push(desc)

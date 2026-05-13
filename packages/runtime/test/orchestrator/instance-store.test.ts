@@ -50,6 +50,21 @@ describe('InstanceStore', () => {
     db.close()
   })
 
+  test('create persists baseCommitSha and round-trips it via get', () => {
+    const db = new Database(':memory:')
+    initInstanceSchema(db)
+    const store = new InstanceStore(db)
+    const inst = store.create({
+      templateId: 't',
+      templateSnapshot: SAMPLE_TEMPLATE,
+      baseCommitSha: 'abc'.repeat(13).slice(0, 40),  // 40-char hex-ish
+    })
+    expect(inst.baseCommitSha).toBeDefined()
+    const fetched = store.get(inst.id)
+    expect(fetched?.baseCommitSha).toBe(inst.baseCommitSha)
+    db.close()
+  })
+
   test('updateStatus persists', () => {
     const db = new Database(':memory:')
     initInstanceSchema(db)
