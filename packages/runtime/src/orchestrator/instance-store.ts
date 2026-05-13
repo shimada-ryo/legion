@@ -75,7 +75,7 @@ export class InstanceStore {
 
   list(): WorkflowInstance[] {
     const rows = this.db
-      .query<Row, []>(`SELECT * FROM workflow_instances ORDER BY started_at_iso DESC`)
+      .query<Row, []>(`SELECT * FROM workflow_instances ORDER BY rowid DESC`)
       .all()
     return rows.map(rowToInstance)
   }
