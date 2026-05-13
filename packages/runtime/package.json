@@ -11,7 +11,8 @@
     "./workspace/provider": "./src/workspace/provider.ts",
     "./workspace/local-worktree-provider": "./src/workspace/local-worktree-provider.ts",
     "./config/loader": "./src/config/loader.ts",
-    "./config/setup-runner": "./src/config/setup-runner.ts"
+    "./config/setup-runner": "./src/config/setup-runner.ts",
+    "./cleanup/cleanup": "./src/cleanup/cleanup.ts"
   },
   "dependencies": {
     "@legion/core": "workspace:*",
