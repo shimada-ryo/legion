@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test'
-import { SessionStore, type SessionState } from '@legion/runtime/adapter/session-store'
+import { SessionStore, EventInjector, type SessionState } from '@legion/runtime/adapter/session-store'
 import { ApprovalOrchestrator } from '@legion/runtime/adapter/approval'
 
 function fakeSession(id: string): SessionState {
@@ -9,6 +9,7 @@ function fakeSession(id: string): SessionState {
     approval: new ApprovalOrchestrator([]),
     workdir: '/tmp',
     role: 'implementer',
+    injector: new EventInjector(),
   }
 }
 
