@@ -1,14 +1,14 @@
 import { describe, test, expect } from 'bun:test'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { loadWorkflowTemplate } from '@legion/runtime/template/loader'
 
-const REPO = process.cwd()
+const REPO_ROOT = resolve(import.meta.dir, '../../../..')
 
 describe('loadWorkflowTemplate', () => {
   test('parses workflows/feature-implementation.yaml into a WorkflowTemplate', async () => {
     const t = await loadWorkflowTemplate(
-      join(REPO, 'workflows', 'feature-implementation.yaml'),
+      join(REPO_ROOT, 'workflows', 'feature-implementation.yaml'),
     )
     expect(t.id).toBe('feature-implementation')
     expect(t.name).toBe('Feature Implementation Workflow')
