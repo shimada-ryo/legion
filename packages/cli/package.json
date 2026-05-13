@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "bin": {
-    "legion": "./src/index.ts"
+    "legion": "./bin/legion.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "@legion/core": "workspace:*",
