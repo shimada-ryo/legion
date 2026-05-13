@@ -12,3 +12,29 @@
 - Write commit messages in English.
 - Do NOT include `Co-Authored-By: Claude <...>` trailers. This is a personal project; do not attribute commits to the AI.
 - Keep the subject line concise (under 70 chars). Use the body for additional context.
+
+## Line Count Awareness
+
+Pay close attention to line counts at every stage. While drafting an
+implementation plan and while writing code, continuously estimate and
+count the lines being added or changed, and monitor the total line count
+of each class, function, and file. See the Refactoring Policy below for
+the upper bounds and what to do when they are exceeded.
+
+## Refactoring Policy
+
+Propose refactoring when:
+
+- A single class exceeds **500 lines**
+- A single function exceeds **100 lines**
+- A single file exceeds **1000 lines**
+
+When refactoring, always lead with **reasonable separation of concerns**:
+each extracted unit must have a clear, independent responsibility that
+a developer can articulate without reading its internals. Line-count
+reduction is the measurement, not the goal — but aim for splits that
+**roughly halve the target file**. Fine-grained decomposition can come
+later. Splitting for the sake of splitting is not acceptable.
+
+Keep line count low at all times. Every line must earn its place.
+Adding lines is easy; reducing them takes skill.
