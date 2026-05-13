@@ -3,17 +3,21 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "legion-server": "./bin/start.ts"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./app": "./src/app.ts"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.140",
     "@legion/core": "workspace:*",
     "@legion/runtime": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "bun test",
-    "start": "bun run src/index.ts"
+    "start": "bun run bin/start.ts"
   }
 }
