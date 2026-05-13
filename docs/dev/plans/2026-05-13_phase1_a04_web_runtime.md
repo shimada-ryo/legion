@@ -56,6 +56,68 @@
 
 ---
 
+## 予測行数 (実測との比較用)
+
+### 実装ファイル (web)
+
+| ファイル | 予測行数 | 主要内訳 | 上限への余裕 |
+| --- | ---: | --- | --- |
+| `vite.config.ts` | 20 | proxy 設定 | 余裕大 |
+| `index.html` | 13 | Vite エントリ | 余裕大 |
+| `src/main.tsx` | 12 | createRoot | 余裕大 |
+| `src/App.tsx` | 25 | Routes 定義 | 余裕大 |
+| `src/styles.css` | 8 | base reset | 余裕大 |
+| `src/types.ts` | 30 | フロント側の narrow 型 | 余裕大 |
+| `src/api/client.ts` | 65 | 6 fetch 関数 (各 ~8-12) | 余裕大 |
+| `src/api/event-stream.ts` | 25 | `useInstanceEventStream` hook | 余裕大 |
+| `src/components/TopNav.tsx` | 25 | nav + NavLink | 余裕大 |
+| `src/components/InstanceCard.tsx` | 40 | カード 1 個 | 余裕大 |
+| `src/components/CanvasOverlay.tsx` | 75 | xyflow バインド (`deriveActiveRoles` 含む) | 余裕大 |
+| `src/components/EventLogPane.tsx` | 15 | bottom log の素朴な list | 余裕大 |
+| `src/components/SidebarTabs.tsx` | 55 | タブ切替 + 各タブ呼び分け | 余裕大 |
+| `src/components/sidebar-tabs/OverviewTab.tsx` | 30 | dl 表示 | 余裕大 |
+| `src/components/sidebar-tabs/EventsTab.tsx` | 25 | 種別 dispatcher | 余裕大 |
+| `src/components/sidebar-tabs/DiffTab.tsx` | 50 | fetch + 折りたたみ | 余裕大 |
+| `src/components/sidebar-tabs/TasksTab.tsx` | 10 | placeholder | 余裕大 |
+| `src/components/event-renderers/MessageEvent.tsx` | 15 | バブル 1 つ | 余裕大 |
+| `src/components/event-renderers/ToolCallEvent.tsx` | 30 | 折りたたみ + JSON pretty | 余裕大 |
+| `src/components/event-renderers/PermissionRequestEvent.tsx` | 50 | Approve/Deny + fetch | 余裕大 |
+| `src/components/event-renderers/StatusChangeEvent.tsx` | 12 | 1 行表示 | 余裕大 |
+| `src/pages/InstancesList.tsx` | 55 | polling list + grid | 余裕大 |
+| `src/pages/InstanceDetail.tsx` | 60 | 3-panel grid + hooks | 余裕大 |
+| `src/pages/Settings.tsx` | 12 | placeholder | 余裕大 |
+| `src/pages/TemplatesList.tsx` | 5 | placeholder (b01 で本実装 +40) | 余裕大 |
+| `src/pages/TemplateDetail.tsx` | 5 | placeholder (b01 で本実装 +40) | 余裕大 |
+
+### 実装ファイル (server 側の追加、Task 9 で a03 に補遺)
+
+| ファイル | 予測行数 | 主要内訳 |
+| --- | ---: | --- |
+| `server/src/http/handlers/diff.ts` | 30 | `handleInstanceDiff` 1 関数 |
+
+**実装小計: 800 (web 770 + server 補遺 30)**
+
+### テストファイル
+
+| ファイル | 予測行数 |
+| --- | ---: |
+| `test/setup.ts` | 5 |
+| `bunfig.toml` | 3 |
+| `test/components/InstanceCard.test.tsx` | 50 |
+| `test/components/event-renderers/PermissionRequestEvent.test.tsx` | 70 |
+| `test/api/client.test.ts` | 50 |
+| **テスト小計** | **178** |
+
+### 粒度評価
+
+- 最大ファイル予測 = `CanvasOverlay.tsx` 75 行、`api/client.ts` 65 行、`InstanceDetail.tsx` 60 行。
+- 1 ファイル 1 コンポーネント原則を貫いている (Sidebar の sub-tab、event renderer の subtype 別、それぞれ別ファイル)。component 単位の split によりテスト isolation も容易。
+- 行数で見ると小ファイルが多いが、これは Layer 2 描画 / 各 sidebar tab / 各 event 種別という concern boundary を表現するため。並べると total 行数の多さよりも 1 ファイル 1 役割の明瞭さが価値を持つ。
+- `pages/InstanceDetail.tsx` は 3-panel の grid template と各 panel の data 渡しだけに留め、ロジックは子コンポーネントへ。これにより `InstanceDetail.tsx` は上限近くに肥大しない。
+- Phase 2 で Director-Worker や approval flow が複雑化したら、`PermissionRequestEvent.tsx` がモーダル / 詳細フォーム化して膨らむ予兆あり。その時点で `event-renderers/permission/` サブディレクトリへ分割する想定。
+
+---
+
 ## Task 1: 新規依存の D-010 チェックリスト
 
 追加候補:
@@ -1495,3 +1557,23 @@ kill %1 %2
 ## 次の計画
 
 [b01 Web UI Track B](2026-05-13_phase1_b01_web_template.md) に進む。b01 は Track A 完了後の最終ステップで、`/templates` 一覧と `/templates/:id` の静的 Layer 1 canvas mockup を仕上げる。
+
+---
+
+## 実測との突合 (実装完了後に記入)
+
+実測コマンド例:
+
+```bash
+wc -l packages/web/src/**/*.{ts,tsx} \
+     packages/web/test/**/*.{ts,tsx} \
+     packages/server/src/http/handlers/diff.ts
+```
+
+突合表 (実装着手者が埋める):
+
+| ファイル | 予測 | 実測 | 差 (±%) | 上限超過? |
+| --- | ---: | ---: | ---: | --- |
+| (実装後に記入) | | | | |
+
+差が ±30% を超えた項目について原因を残す。

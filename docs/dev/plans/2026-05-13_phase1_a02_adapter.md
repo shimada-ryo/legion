@@ -36,6 +36,40 @@
 
 ---
 
+## 予測行数 (実測との比較用)
+
+### 実装ファイル
+
+| ファイル | 予測行数 | 主要内訳 | 上限への余裕 |
+| --- | ---: | --- | --- |
+| `adapter/role-profile.ts` | 35 | 定数 3 + `defaultAllowedToolsFor` (~5 行) | 余裕大 |
+| `adapter/event-convert.ts` | 65 | `toAgentEvent` (~40) + `event` / `isObject` helper | 余裕大 |
+| `adapter/approval.ts` | 80 | `ApprovalOrchestrator` クラス (~60) + `matchBashPattern` (~15) | 余裕大 |
+| `adapter/session-store.ts` | 35 | `SessionStore` クラス | 余裕大 |
+| `adapter/provider.ts` | 120 | `ClaudeCodeAgentSDKProvider` クラス (launch ~30 / stream ~7 / 他 method 各 ~5-10) | クラス 500 / 関数 100 ともに余裕 |
+| **実装小計** | **335** | | |
+
+### テストファイル
+
+| ファイル | 予測行数 |
+| --- | ---: |
+| `test/adapter/role-profile.test.ts` | 35 |
+| `test/adapter/event-convert.test.ts` | 70 |
+| `test/adapter/approval.test.ts` | 80 |
+| `test/adapter/provider.test.ts` | 100 |
+| `test/adapter/provider.integration.test.ts` | 30 |
+| **テスト小計** | **315** |
+
+### 粒度評価
+
+- 最大ファイル予測 = `provider.ts` 120 行 (上限 1000 に対して 12%)。クラス size 110 行 (上限 500 に対して 22%)。
+- 最大関数予測 = `launch` 30 行 (上限 100 に対して 30%)。
+- adapter サブシステムは概念的に「provider 本体 / 権限 / イベント変換 / セッション保持 / Role プロファイル」の 5 責務に分解されており、それぞれ独立ファイル。1 ファイル 1 責務原則を満たす。
+- 行数だけでなく interface boundary 観点でも妥当: `ApprovalOrchestrator` だけ取り出して別 provider (Codex 等) でも使い回せる構造。
+- 実装着手後、`provider.ts` が 200 行を超えるようなら hooks 切り出し検討。
+
+---
+
 ## Task 1: 新規依存 (`@anthropic-ai/claude-agent-sdk`) の D-010 チェックリスト
 
 **Files:**
@@ -1078,3 +1112,21 @@ git commit -m "chore(runtime): tidy adapter exports and drop smoke test"
 ## 次の計画
 
 a02 完了後、[a03 Event log + Server](2026-05-13_phase1_a03_server.md) に進む。a03 は a01 + a02 を直列に組み合わせて HTTP/WS API として露出する層。
+
+---
+
+## 実測との突合 (実装完了後に記入)
+
+実測コマンド例:
+
+```bash
+wc -l packages/runtime/src/adapter/*.ts packages/runtime/test/adapter/*.ts
+```
+
+突合表 (実装着手者が埋める):
+
+| ファイル | 予測 | 実測 | 差 (±%) | 上限超過? |
+| --- | ---: | ---: | ---: | --- |
+| (実装後に記入) | | | | |
+
+差が ±30% を超えた項目について原因を残す。

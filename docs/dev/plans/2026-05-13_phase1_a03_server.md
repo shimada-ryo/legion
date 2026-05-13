@@ -51,6 +51,63 @@
 
 ---
 
+## 予測行数 (実測との比較用)
+
+### 実装ファイル (runtime)
+
+| ファイル | 予測行数 | 主要内訳 | 上限への余裕 |
+| --- | ---: | --- | --- |
+| `eventlog/schema.ts` | 15 | DDL 文字列 | 余裕大 |
+| `eventlog/writer.ts` | 30 | `EventLogWriter` クラス (~25) | 余裕大 |
+| `eventlog/reader.ts` | 75 | `EventLogReader` クラス (~60) + `rowToEvent` helper | 余裕大 |
+| `eventlog/eventlog.ts` | 30 | `EventLog` ラッパクラス | 余裕大 |
+| `template/loader.ts` | 80 | `loadWorkflowTemplate` (~25) + `parseNodes` / `parseEdges` / `parseNode` (合計 ~50) | 余裕大 |
+| `template/registry.ts` | 30 | `TemplateRegistry` クラス | 余裕大 |
+| `orchestrator/instance-store.ts` | 95 | DDL (~12) + `InstanceStore` クラス (~70) + `rowToInstance` (~15) | 余裕大 |
+| `orchestrator/spawn-agent.ts` | 30 | `firstRoleNode` + `buildInitialPrompt` 2 関数 | 余裕大 |
+| `orchestrator/trigger.ts` | 75 | `triggerWorkflow` (~50) + 型定義 | 関数 100 行に対して 50% |
+
+### 実装ファイル (server)
+
+| ファイル | 予測行数 | 主要内訳 | 上限への余裕 |
+| --- | ---: | --- | --- |
+| `server/src/app.ts` | 45 | `startApp` (~25) + 型定義 | 余裕大 |
+| `server/src/http/routes.ts` | 30 | `route` dispatcher 1 関数 | 余裕大 |
+| `server/src/http/handlers/templates.ts` | 25 | `handleTemplates` 1 関数 | 余裕大 |
+| `server/src/http/handlers/instances.ts` | 60 | `handleWorkflowsTrigger` (~25) + list (~10) + detail (~15) | 余裕大 |
+| `server/src/http/handlers/approvals.ts` | 30 | `handleApproval` 1 関数 | 余裕大 |
+| `server/src/ws/event-stream.ts` | 35 | `upgradeEventStream` + `wsHandlers` factory | 余裕大 |
+| `server/bin/start.ts` | 35 | bun entry shim | 余裕大 |
+| **実装小計** | **665** | | |
+
+### テストファイル
+
+| ファイル | 予測行数 |
+| --- | ---: |
+| `runtime/test/eventlog/writer.test.ts` | 60 |
+| `runtime/test/eventlog/reader.test.ts` | 70 |
+| `runtime/test/eventlog/eventlog.test.ts` | 40 |
+| `runtime/test/template/loader.test.ts` | 45 |
+| `runtime/test/template/registry.test.ts` | 30 |
+| `runtime/test/orchestrator/instance-store.test.ts` | 60 |
+| `runtime/test/orchestrator/spawn-agent.test.ts` | 40 |
+| `runtime/test/orchestrator/trigger.test.ts` | 90 |
+| `server/test/handlers/templates.test.ts` | 50 |
+| `server/test/handlers/instances.test.ts` | 100 |
+| `server/test/handlers/approvals.test.ts` | 70 |
+| `server/test/ws/event-stream.test.ts` | 50 |
+| **テスト小計** | **705** |
+
+### 粒度評価
+
+- 最大ファイル予測 = `orchestrator/instance-store.ts` 95 行、`template/loader.ts` 80 行、`orchestrator/trigger.ts` 75 行。
+- 最大関数予測 = `triggerWorkflow` 50 行 (上限 100 に対して 50%)、`InstanceStore` クラス 70 行 (上限 500 に対して 14%)。
+- handler を 1 ファイル 1 endpoint で分けているのは routing の見通しと test isolation のため。`instances.ts` だけ 3 endpoint 同居しているが、いずれも instance リソースに対する操作なので 1 ファイルに保つ方が自然。
+- `eventlog/` は writer / reader / wrapper を分離。reader が subscriber を持つので writer から独立、wrapper で結合点を明示。tight coupling せず separation of concerns を保つ。
+- 上限突破はどこにも無し。Phase 2 で Director-Worker orchestration が乗ると `trigger.ts` が膨らみそうなので、その時点で `orchestrator/` を細分化する想定。
+
+---
+
 ## Task 1: SQLite event log のスキーマと writer
 
 **Files:**
@@ -2144,3 +2201,28 @@ git commit -m "feat(server): start.ts entry for bun run start"
 ## 次の計画
 
 [a04 Web UI Track A](2026-05-13_phase1_a04_web_runtime.md) に進む。a04 は a03 の HTTP/WS API をブラウザから叩く。
+
+---
+
+## 実測との突合 (実装完了後に記入)
+
+実測コマンド例:
+
+```bash
+wc -l packages/runtime/src/eventlog/*.ts \
+     packages/runtime/src/template/*.ts \
+     packages/runtime/src/orchestrator/*.ts \
+     packages/server/src/**/*.ts \
+     packages/runtime/test/eventlog/*.ts \
+     packages/runtime/test/template/*.ts \
+     packages/runtime/test/orchestrator/*.ts \
+     packages/server/test/**/*.ts
+```
+
+突合表 (実装着手者が埋める):
+
+| ファイル | 予測 | 実測 | 差 (±%) | 上限超過? |
+| --- | ---: | ---: | ---: | --- |
+| (実装後に記入) | | | | |
+
+差が ±30% を超えた項目について原因を残す。

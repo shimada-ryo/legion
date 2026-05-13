@@ -51,6 +51,60 @@
 
 ---
 
+## 予測行数 (実装完了時の安定状態想定、実測と突合する)
+
+CLAUDE.md の Line Count Awareness / Refactoring Policy (関数 100 / クラス 500 / ファイル 1000) を計画段階で逸脱しないことを確認する。
+
+### 実装ファイル
+
+| ファイル | 予測行数 | 主要内訳 | 上限への余裕 |
+| --- | ---: | --- | --- |
+| `core/src/types/workspace.ts` | 10 | `WorkspaceRef` union | 余裕大 |
+| `core/src/types/config.ts` | 18 | `LegionConfig` + `LegionWorktreeConfig` | 余裕大 |
+| `runtime/src/workspace/provider.ts` | 25 | `WorkspaceProvider` interface + I/O 型 | 余裕大 |
+| `runtime/src/workspace/local-worktree-provider.ts` | 75 | `LocalWorktreeProvider` クラス (create 25 / destroy 10 / list 20 / private 10) | クラス上限 500 / 関数上限 100 ともに余裕大 |
+| `runtime/src/workspace/repo-fingerprint.ts` | 10 | 1 関数 | 余裕大 |
+| `runtime/src/workspace/branch-naming.ts` | 25 | `wfShortId` + `branchName` 2 関数 + 定数 | 余裕大 |
+| `runtime/src/workspace/git.ts` | 85 | 6 関数 + `parseWorktreeListPorcelain` (~30) | 余裕大 |
+| `runtime/src/config/loader.ts` | 55 | `loadLegionConfig` + `validate` (~25) + `ensureStringArray` | 余裕大 |
+| `runtime/src/config/setup-runner.ts` | 40 | `runWorktreeSetup` 1 関数 | 余裕大 |
+| `runtime/src/cleanup/cleanup.ts` | 85 | `classifyForCleanup` (~25) + `runCleanup` (~35) + 型 | 余裕大 |
+| `runtime/src/version.ts` | 2 | 定数のみ | 余裕大 |
+| `runtime/src/index.ts` (修正) | 14 | re-export 集約 | 余裕大 |
+| `cli/src/index.ts` | 30 | `runCli` (~25) | 余裕大 |
+| `cli/src/commands/cleanup.ts` | 30 | `cleanupCommand` 1 関数 | 余裕大 |
+| `cli/bin/legion.ts` | 5 | shim | 余裕大 |
+| **実装小計** | **509** | | |
+
+### テストファイル
+
+| ファイル | 予測行数 |
+| --- | ---: |
+| `core/test/types/workspace.test.ts` | 25 |
+| `core/test/types/config.test.ts` | 25 |
+| `core/test/types/agent-provider.test.ts` | 25 |
+| `runtime/test/helpers/temp-repo.ts` | 30 |
+| `runtime/test/helpers/temp-repo.smoke.test.ts` | 20 |
+| `runtime/test/workspace/repo-fingerprint.test.ts` | 35 |
+| `runtime/test/workspace/branch-naming.test.ts` | 35 |
+| `runtime/test/workspace/git.test.ts` | 80 |
+| `runtime/test/workspace/local-worktree-provider.test.ts` | 130 |
+| `runtime/test/config/loader.test.ts` | 50 |
+| `runtime/test/config/setup-runner.test.ts` | 80 |
+| `runtime/test/cleanup/cleanup.test.ts` | 110 |
+| **テスト小計** | **645** |
+
+### 粒度評価
+
+- 最大ファイル予測 = `git.ts` 85 行 (上限 1000 に対して 8.5%)。`local-worktree-provider.ts` 75 行が次点。
+- 最大関数予測 = `parseWorktreeListPorcelain` 30 行 (上限 100 に対して 30%)。
+- クラス予測最大 = `LocalWorktreeProvider` 70 行 (上限 500 に対して 14%)。
+- いずれも上限に対して **3〜10 倍の安全余裕**。本計画レベルでの過剰分割なし、不足分割もなし。
+- 1 ファイル 1 責務 (e.g. branch 命名は `branch-naming.ts`、fingerprint は `repo-fingerprint.ts`) で読みやすさ優先の split を採用しているため、行数だけでなく concern 分離の意味でも妥当。
+- 実装着手後、各ファイルが予測の ±30% 以内に収まるかを確認すること。逸脱があれば本計画末尾「実測との突合」セクションに記録する。
+
+---
+
 ## Task 1: 新規依存 (`ulid`, `yaml`) の D-010 チェックリスト承認
 
 D-010 (サードパーティ健全性監視) では依存追加前に以下をチェックする。本タスクはチェック実施と user 承認取得まで。
@@ -1938,3 +1992,28 @@ git commit -m "chore: wire up bun test across workspaces"
 ## 次の計画
 
 a01 完了後、[a02 Claude Code adapter](2026-05-13_phase1_a02_adapter.md) に進む。a02 は a01 の `LocalWorktreeProvider` に依存する (agent に渡す cwd を取得するため)。
+
+---
+
+## 実測との突合 (実装完了後に記入)
+
+実装フェーズ終了時、各ファイルの実測行数を取得し本計画の予測値と比較する。
+
+実測コマンド例:
+
+```bash
+wc -l packages/core/src/types/workspace.ts \
+     packages/core/src/types/config.ts \
+     packages/runtime/src/workspace/*.ts \
+     packages/runtime/src/config/*.ts \
+     packages/runtime/src/cleanup/*.ts \
+     packages/cli/src/**/*.ts
+```
+
+突合表 (実装着手者が埋める):
+
+| ファイル | 予測 | 実測 | 差 (±%) | 上限超過? |
+| --- | ---: | ---: | ---: | --- |
+| (実装後に記入) | | | | |
+
+差が ±30% を超えた項目について短い原因コメントを残す (見落とした case、抽象化漏れ、想定外の boilerplate 等)。

@@ -32,6 +32,37 @@
 
 ---
 
+## 予測行数 (実測との比較用)
+
+### 実装ファイル
+
+| ファイル | 予測行数 | 主要内訳 | 上限への余裕 |
+| --- | ---: | --- | --- |
+| `components/TemplateCard.tsx` | 30 | カード 1 つ | 余裕大 |
+| `components/TemplateCanvas.tsx` | 60 | xyflow バインド (node / edge memo) | 余裕大 |
+| `components/template-canvas/styling.ts` | 75 | 色マップ + `nodeStyleFor` + `edgeStyleFor` | 余裕大 |
+| `components/template-canvas/layout.ts` | 50 | `layoutTemplate` 単独関数 (~30) + 定数 | 余裕大 |
+| `pages/TemplatesList.tsx` (上書き) | 40 | fetch + grid | 余裕大 |
+| `pages/TemplateDetail.tsx` (上書き) | 45 | header + canvas マウント | 余裕大 |
+| `pages/Settings.tsx` (上書き) | 10 | placeholder | 余裕大 |
+| **実装小計** | **310** | | |
+
+### テストファイル
+
+| ファイル | 予測行数 |
+| --- | ---: |
+| `test/components/template-canvas/styling.test.ts` | 40 |
+| `test/components/template-canvas/layout.test.ts` | 45 |
+| **テスト小計** | **85** |
+
+### 粒度評価
+
+- 最大ファイル予測 = `template-canvas/styling.ts` 75 行。Layer 1 描画の概念は「node 種別 → 色」「edge 種別 → 色」の 2 マップだけなので 1 ファイルに同居して問題なし。
+- `layout.ts` を独立ファイルに切ったのは: アルゴリズム (BFS / topological 配置) と描画 (xyflow への bridge) を分離するため。後に dagre 等の置換を試したい時にここだけ差し替えれば済む。
+- 上限突破は無し。Phase 1 の Track B は本質的に「読み取り専用キャンバス」なので量は限定的。Phase 2 で編集機能を入れたら `TemplateCanvas.tsx` が大きく成長する見込みあり (drag / connect / validate)。その時点で `TemplateEditor` として別ファイル化する想定。
+
+---
+
 ## Task 1: `/templates` 一覧の本実装
 
 **Files:**
@@ -634,3 +665,25 @@ b01 完了をもって Phase 1 の全 deliverable が揃う:
 - Web UI Track B: Templates 系静的モックアップ (b01)
 
 このあとは Phase 2 (Director–Worker orchestration + Blackboard) に進む。Phase 2 計画は別途新規ブレストから起こす。
+
+---
+
+## 実測との突合 (実装完了後に記入)
+
+実測コマンド例:
+
+```bash
+wc -l packages/web/src/components/TemplateCard.tsx \
+     packages/web/src/components/TemplateCanvas.tsx \
+     packages/web/src/components/template-canvas/*.ts \
+     packages/web/src/pages/Templates*.tsx \
+     packages/web/test/components/template-canvas/*.ts
+```
+
+突合表 (実装着手者が埋める):
+
+| ファイル | 予測 | 実測 | 差 (±%) | 上限超過? |
+| --- | ---: | ---: | ---: | --- |
+| (実装後に記入) | | | | |
+
+差が ±30% を超えた項目について原因を残す。
