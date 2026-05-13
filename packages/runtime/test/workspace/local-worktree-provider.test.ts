@@ -69,3 +69,57 @@ describe('LocalWorktreeProvider.create', () => {
     expect((desc.ref as { branch?: string }).branch).toBeUndefined()
   })
 })
+
+describe('LocalWorktreeProvider.destroy', () => {
+  test('removes a previously created worktree', async () => {
+    const provider = new LocalWorktreeProvider({ repoPath: repo.path, baseDir })
+    const sha = await resolveCommitSha(repo.path, 'HEAD')
+    const desc = await provider.create({
+      workflowInstanceId: '01j9x5z8yk0000000000000000',
+      agentInstanceId: 'inst-x',
+      role: 'implementer',
+      seq: 1,
+      baseCommitSha: sha,
+    })
+    await provider.destroy(desc)
+    const remaining = await provider.list('01j9x5z8yk0000000000000000')
+    expect(remaining.map((w) => w.path)).not.toContain(desc.path)
+  })
+
+  test('is idempotent: calling destroy twice does not throw', async () => {
+    const provider = new LocalWorktreeProvider({ repoPath: repo.path, baseDir })
+    const sha = await resolveCommitSha(repo.path, 'HEAD')
+    const desc = await provider.create({
+      workflowInstanceId: '01j9x5z8yk0000000000000000',
+      agentInstanceId: 'inst-y',
+      role: 'implementer',
+      seq: 1,
+      baseCommitSha: sha,
+    })
+    await provider.destroy(desc)
+    await provider.destroy(desc) // second call: no-op
+  })
+})
+
+describe('LocalWorktreeProvider.list', () => {
+  test('lists only worktrees under the given workflow instance', async () => {
+    const provider = new LocalWorktreeProvider({ repoPath: repo.path, baseDir })
+    const sha = await resolveCommitSha(repo.path, 'HEAD')
+    await provider.create({
+      workflowInstanceId: '01j9x5z8yk0000000000000000',
+      agentInstanceId: 'inst-a',
+      role: 'implementer',
+      seq: 1,
+      baseCommitSha: sha,
+    })
+    await provider.create({
+      workflowInstanceId: '01j9other999000000000000000',
+      agentInstanceId: 'inst-b',
+      role: 'implementer',
+      seq: 1,
+      baseCommitSha: sha,
+    })
+    const list = await provider.list('01j9x5z8yk0000000000000000')
+    expect(list.length).toBe(1)
+  })
+})
