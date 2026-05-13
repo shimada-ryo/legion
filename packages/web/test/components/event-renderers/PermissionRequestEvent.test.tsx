@@ -1,8 +1,12 @@
-import { describe, test, expect, mock, beforeEach } from 'bun:test'
-import { render, fireEvent } from '@testing-library/react'
+import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test'
+import { render, fireEvent, cleanup } from '@testing-library/react'
 import PermissionRequestEvent from '../../../src/components/event-renderers/PermissionRequestEvent'
 
 let capturedFetchArgs: { url: string; init: { body?: string; method?: string } }[] = []
+
+afterEach(() => {
+  cleanup()
+})
 
 beforeEach(() => {
   capturedFetchArgs = []

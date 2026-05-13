@@ -1,7 +1,11 @@
-import { describe, test, expect } from 'bun:test'
-import { render } from '@testing-library/react'
+import { describe, test, expect, afterEach } from 'bun:test'
+import { render, cleanup } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import InstanceCard from '../../src/components/InstanceCard'
+
+afterEach(() => {
+  cleanup()
+})
 
 describe('InstanceCard', () => {
   test('renders template id and status', () => {
