@@ -12,7 +12,8 @@
     "./workspace/local-worktree-provider": "./src/workspace/local-worktree-provider.ts",
     "./config/loader": "./src/config/loader.ts",
     "./config/setup-runner": "./src/config/setup-runner.ts",
-    "./cleanup/cleanup": "./src/cleanup/cleanup.ts"
+    "./cleanup/cleanup": "./src/cleanup/cleanup.ts",
+    "./adapter/role-profile": "./src/adapter/role-profile.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.140",
