@@ -7,6 +7,7 @@ import {
   handleInstanceDetail,
   handleWorkflowsTrigger,
 } from './handlers/instances'
+import { handleApproval } from './handlers/approvals'
 
 export function route(
   req: Request,
@@ -24,6 +25,8 @@ export function route(
   if (path === '/instances') {
     return handleInstancesList(req, ctx)
   }
+  const a = path.match(/^\/instances\/([^/]+)\/approvals\/([^/]+)$/)
+  if (a) return handleApproval(a[1]!, a[2]!, req, ctx)
   const m = path.match(/^\/instances\/([^/]+)$/)
   if (m) return handleInstanceDetail(m[1]!, ctx)
   return new Response('Not Found', { status: 404 })
