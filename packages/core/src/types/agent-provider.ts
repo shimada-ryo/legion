@@ -85,7 +85,9 @@ export interface AgentProvider {
 
   status(sessionId: string): Promise<unknown>
   stream(sessionId: string): AsyncIterable<AgentEvent>
-  attach(sessionId: string): Promise<PtyHandle>
+  // D-032: attach() and PtyHandle are unused in Phase 1 (Agent SDK has no PTY).
+  // Implementations whose capabilities.supportsAttach is false may omit this method.
+  attach?(sessionId: string): Promise<PtyHandle>
 
   checkpoint(sessionId: string): Promise<Checkpoint>
   resume(sessionId: string, checkpoint?: string): Promise<SessionHandle>
