@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./workspace/repo-fingerprint": "./src/workspace/repo-fingerprint.ts"
+    "./workspace/repo-fingerprint": "./src/workspace/repo-fingerprint.ts",
+    "./workspace/branch-naming": "./src/workspace/branch-naming.ts"
   },
   "dependencies": {
     "@legion/core": "workspace:*",
