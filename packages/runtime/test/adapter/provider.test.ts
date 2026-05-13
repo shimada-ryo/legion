@@ -51,10 +51,10 @@ describe('ClaudeCodeAgentSDKProvider.launch', () => {
 })
 
 describe('ClaudeCodeAgentSDKProvider approval flow', () => {
-  test('PreToolUse hook approves in-profile tools immediately without emitting permission_request', async () => {
-    let capturedHook: ((input: unknown) => Promise<unknown>) | null = null
+  test('canUseTool approves in-profile tools immediately without emitting permission_request', async () => {
+    let captured: ((tool: string, input: Record<string, unknown>) => Promise<unknown>) | null = null
     const queryMock = (input: any) => {
-      capturedHook = input.options.hooks.PreToolUse[0]
+      captured = input.options.canUseTool
       return (async function* () {})()
     }
     const provider = new ClaudeCodeAgentSDKProvider({ query: queryMock })
@@ -63,23 +63,21 @@ describe('ClaudeCodeAgentSDKProvider approval flow', () => {
       role: 'implementer',
       initialPrompt: '',
     })
-    const res = await capturedHook!({ tool_name: 'Edit', tool_input: { path: '/y' } })
-    expect((res as { continue: boolean }).continue).toBe(true)
+    const res = await captured!('Edit', { path: '/y' })
+    expect((res as { behavior: string }).behavior).toBe('allow')
 
-    // Confirm no permission_request bubbles through stream()
     const events: { type: string }[] = []
     for await (const e of provider.stream(h.sessionId)) events.push(e)
     expect(events.filter((e) => e.type === 'permission_request')).toEqual([])
   })
 
-  test('PreToolUse hook for out-of-profile tool emits permission_request event and is resolved by approve()', async () => {
-    let capturedHook: ((input: unknown) => Promise<unknown>) | null = null
-    // Use a deferred-resolve to keep the SDK iter alive until we drive the hook
+  test('canUseTool for out-of-profile tool emits permission_request event and is resolved by approve()', async () => {
+    let captured: ((tool: string, input: Record<string, unknown>) => Promise<unknown>) | null = null
     let finishSdk: () => void = () => {}
     const sdkDone = new Promise<void>((r) => { finishSdk = r })
 
     const queryMock = (input: any) => {
-      capturedHook = input.options.hooks.PreToolUse[0]
+      captured = input.options.canUseTool
       return (async function* () {
         await sdkDone
       })()
@@ -91,15 +89,13 @@ describe('ClaudeCodeAgentSDKProvider approval flow', () => {
       initialPrompt: '',
     })
 
-    // Drive the hook in parallel with consuming the stream
-    const hookResultPromise = capturedHook!({ tool_name: 'Edit', tool_input: { path: '/y' } })
+    const callbackPromise = captured!('Edit', { path: '/y' })
 
     const events: AgentEvent[] = []
     const streamPromise = (async () => {
       for await (const e of provider.stream(h.sessionId)) {
         events.push(e)
         if (e.type === 'permission_request') {
-          // Approve via provider API, then finish the SDK iter
           const payload = e.payload as { approvalId: string; tool: string }
           await provider.approve(h.sessionId, payload.approvalId)
           finishSdk()
@@ -107,8 +103,8 @@ describe('ClaudeCodeAgentSDKProvider approval flow', () => {
       }
     })()
 
-    const hookResult = await hookResultPromise
-    expect((hookResult as { continue: boolean }).continue).toBe(true)
+    const result = await callbackPromise
+    expect((result as { behavior: string }).behavior).toBe('allow')
     await streamPromise
 
     expect(events.some((e) => e.type === 'permission_request')).toBe(true)

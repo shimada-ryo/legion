@@ -72,19 +72,11 @@ export class ClaudeCodeAgentSDKProvider implements AgentProvider {
         cwd: req.workdir,
         allowedTools: allowed,
         permissionMode: 'default',
-        hooks: {
-          PreToolUse: [
-            async (input: unknown) => {
-              const i = input as { tool_name?: string; tool_input?: unknown }
-              const d = await approval.decide({
-                tool: i.tool_name ?? '',
-                input: i.tool_input ?? {},
-              })
-              return d.allow
-                ? { continue: true }
-                : { continue: false, message: d.reason ?? 'denied' }
-            },
-          ],
+        canUseTool: async (toolName: string, input: Record<string, unknown>) => {
+          const d = await approval.decide({ tool: toolName, input })
+          return d.allow
+            ? { behavior: 'allow' as const, updatedInput: input }
+            : { behavior: 'deny' as const, message: d.reason ?? 'denied' }
         },
         ...(req.model !== undefined ? { model: req.model } : {}),
         ...(req.env !== undefined ? { env: req.env } : {}),
