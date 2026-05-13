@@ -9,7 +9,8 @@
     "./workspace/branch-naming": "./src/workspace/branch-naming.ts",
     "./workspace/git": "./src/workspace/git.ts",
     "./workspace/provider": "./src/workspace/provider.ts",
-    "./workspace/local-worktree-provider": "./src/workspace/local-worktree-provider.ts"
+    "./workspace/local-worktree-provider": "./src/workspace/local-worktree-provider.ts",
+    "./config/loader": "./src/config/loader.ts"
   },
   "dependencies": {
     "@legion/core": "workspace:*",
