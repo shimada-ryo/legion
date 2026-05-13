@@ -13,7 +13,8 @@
     "./config/loader": "./src/config/loader.ts",
     "./config/setup-runner": "./src/config/setup-runner.ts",
     "./cleanup/cleanup": "./src/cleanup/cleanup.ts",
-    "./adapter/role-profile": "./src/adapter/role-profile.ts"
+    "./adapter/role-profile": "./src/adapter/role-profile.ts",
+    "./adapter/event-convert": "./src/adapter/event-convert.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.140",
