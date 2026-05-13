@@ -50,6 +50,7 @@
       "name": "@legion/web",
       "version": "0.0.0",
       "dependencies": {
+        "@legion/core": "workspace:*",
         "@xyflow/react": "^12.10.2",
         "react": "^19.2.6",
         "react-dom": "^19.2.6",
