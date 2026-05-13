@@ -15,7 +15,8 @@
     "./cleanup/cleanup": "./src/cleanup/cleanup.ts",
     "./adapter/role-profile": "./src/adapter/role-profile.ts",
     "./adapter/event-convert": "./src/adapter/event-convert.ts",
-    "./adapter/approval": "./src/adapter/approval.ts"
+    "./adapter/approval": "./src/adapter/approval.ts",
+    "./adapter/session-store": "./src/adapter/session-store.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.140",
