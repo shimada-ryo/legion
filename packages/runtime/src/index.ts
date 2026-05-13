@@ -1,4 +1,18 @@
-// Placeholder. Implementation starts in Phase 1: worktree manager, PTY supervisor,
-// Claude Code adapter, blackboard service. See docs/dev/minutes/ for design.
+export { RUNTIME_VERSION } from './version'
 
-export const RUNTIME_VERSION = '0.0.0'
+// a01: workspace + config + cleanup
+export * from './workspace/provider'
+export * from './workspace/local-worktree-provider'
+export * from './workspace/repo-fingerprint'
+export * from './workspace/branch-naming'
+export * from './workspace/git'
+export * from './config/loader'
+export * from './config/setup-runner'
+export * from './cleanup/cleanup'
+
+// a02: claude code adapter
+export * from './adapter/provider'
+export * from './adapter/role-profile'
+export * from './adapter/approval'
+export * from './adapter/event-convert'
+export * from './adapter/session-store'
