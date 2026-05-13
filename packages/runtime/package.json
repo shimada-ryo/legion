@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./workspace/repo-fingerprint": "./src/workspace/repo-fingerprint.ts"
   },
   "dependencies": {
     "@legion/core": "workspace:*",
@@ -12,6 +13,6 @@
     "yaml": "^2.9.0"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   }
 }
