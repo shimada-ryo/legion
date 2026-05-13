@@ -10,7 +10,8 @@
     "./workspace/git": "./src/workspace/git.ts",
     "./workspace/provider": "./src/workspace/provider.ts",
     "./workspace/local-worktree-provider": "./src/workspace/local-worktree-provider.ts",
-    "./config/loader": "./src/config/loader.ts"
+    "./config/loader": "./src/config/loader.ts",
+    "./config/setup-runner": "./src/config/setup-runner.ts"
   },
   "dependencies": {
     "@legion/core": "workspace:*",
