@@ -7,7 +7,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@legion/core": "workspace:*"
+    "@legion/core": "workspace:*",
+    "ulid": "^3.0.2",
+    "yaml": "^2.9.0"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
