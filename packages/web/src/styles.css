@@ -1,0 +1,5 @@
+:root { font-family: system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body, html, #root { height: 100%; margin: 0; }
+.app { display: flex; flex-direction: column; height: 100%; }
+.main { flex: 1; overflow: hidden; }
