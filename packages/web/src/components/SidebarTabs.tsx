@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { WorkflowTemplate, AgentEvent } from '@legion/core'
 import OverviewTab from './sidebar-tabs/OverviewTab'
+import EventsTab from './sidebar-tabs/EventsTab'
 
 export interface SidebarTabsProps {
   instanceId: string
@@ -14,8 +15,6 @@ type TabName = (typeof TABS)[number]
 
 export default function SidebarTabs(props: SidebarTabsProps) {
   const [tab, setTab] = useState<TabName>('Overview')
-  void props.instanceId
-  void props.events
   return (
     <div>
       <div style={{ borderBottom: '1px solid #ddd' }}>
@@ -38,7 +37,7 @@ export default function SidebarTabs(props: SidebarTabsProps) {
         {tab === 'Overview' && (
           <OverviewTab template={props.template} selectedNodeId={props.selectedNodeId} />
         )}
-        {tab === 'Events' && <div>Events (Task 8)</div>}
+        {tab === 'Events' && <EventsTab events={props.events} instanceId={props.instanceId} />}
         {tab === 'Diff' && <div>Diff (Task 9)</div>}
         {tab === 'Tasks' && <div>Tasks (Task 10)</div>}
       </div>
