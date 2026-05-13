@@ -19,7 +19,8 @@
     "./adapter/session-store": "./src/adapter/session-store.ts",
     "./adapter/provider": "./src/adapter/provider.ts",
     "./eventlog/schema": "./src/eventlog/schema.ts",
-    "./eventlog/writer": "./src/eventlog/writer.ts"
+    "./eventlog/writer": "./src/eventlog/writer.ts",
+    "./eventlog/reader": "./src/eventlog/reader.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.140",
