@@ -23,7 +23,8 @@
     "./eventlog/reader": "./src/eventlog/reader.ts",
     "./eventlog/eventlog": "./src/eventlog/eventlog.ts",
     "./template/loader": "./src/template/loader.ts",
-    "./template/registry": "./src/template/registry.ts"
+    "./template/registry": "./src/template/registry.ts",
+    "./orchestrator/instance-store": "./src/orchestrator/instance-store.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.140",
