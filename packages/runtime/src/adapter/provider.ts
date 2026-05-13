@@ -69,7 +69,7 @@ export class ClaudeCodeAgentSDKProvider implements AgentProvider {
     const iter = this.opts.query({
       prompt: req.initialPrompt,
       options: {
-        workingDirectory: req.workdir,
+        cwd: req.workdir,
         allowedTools: allowed,
         permissionMode: 'default',
         hooks: {

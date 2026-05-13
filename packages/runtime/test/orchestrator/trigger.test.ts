@@ -53,7 +53,7 @@ describe('triggerWorkflow', () => {
   test('creates an instance, creates a worktree, spawns one agent, and pipes events to event log', async () => {
     const wt = new LocalWorktreeProvider({ repoPath: repo.path, baseDir })
     const queryMock = (input: any): AsyncIterable<unknown> => {
-      expect(input.options.workingDirectory).toBeDefined()
+      expect(input.options.cwd).toBeDefined()
       return (async function* () {
         yield { type: 'system', subtype: 'init', session_id: 'x', model: 'm' }
         yield {
