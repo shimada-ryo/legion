@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./workspace/repo-fingerprint": "./src/workspace/repo-fingerprint.ts",
-    "./workspace/branch-naming": "./src/workspace/branch-naming.ts"
+    "./workspace/branch-naming": "./src/workspace/branch-naming.ts",
+    "./workspace/git": "./src/workspace/git.ts"
   },
   "dependencies": {
     "@legion/core": "workspace:*",
