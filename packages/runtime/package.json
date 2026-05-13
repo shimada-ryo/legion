@@ -8,7 +8,8 @@
     "./workspace/repo-fingerprint": "./src/workspace/repo-fingerprint.ts",
     "./workspace/branch-naming": "./src/workspace/branch-naming.ts",
     "./workspace/git": "./src/workspace/git.ts",
-    "./workspace/provider": "./src/workspace/provider.ts"
+    "./workspace/provider": "./src/workspace/provider.ts",
+    "./workspace/local-worktree-provider": "./src/workspace/local-worktree-provider.ts"
   },
   "dependencies": {
     "@legion/core": "workspace:*",
