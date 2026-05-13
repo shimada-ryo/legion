@@ -8,6 +8,7 @@ import {
   handleWorkflowsTrigger,
 } from './handlers/instances'
 import { handleApproval } from './handlers/approvals'
+import { handleInstanceDiff } from './handlers/diff'
 
 export function route(
   req: Request,
@@ -27,6 +28,8 @@ export function route(
   }
   const a = path.match(/^\/instances\/([^/]+)\/approvals\/([^/]+)$/)
   if (a) return handleApproval(a[1]!, a[2]!, req, ctx)
+  const d = path.match(/^\/instances\/([^/]+)\/diff$/)
+  if (d) return handleInstanceDiff(d[1]!, ctx)
   const m = path.match(/^\/instances\/([^/]+)$/)
   if (m) return handleInstanceDetail(m[1]!, ctx)
   return new Response('Not Found', { status: 404 })
