@@ -21,7 +21,8 @@
     "./eventlog/schema": "./src/eventlog/schema.ts",
     "./eventlog/writer": "./src/eventlog/writer.ts",
     "./eventlog/reader": "./src/eventlog/reader.ts",
-    "./eventlog/eventlog": "./src/eventlog/eventlog.ts"
+    "./eventlog/eventlog": "./src/eventlog/eventlog.ts",
+    "./template/loader": "./src/template/loader.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.140",
