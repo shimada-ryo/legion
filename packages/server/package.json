@@ -1,0 +1,17 @@
+{
+  "name": "@legion/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@legion/core": "workspace:*",
+    "@legion/runtime": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "start": "bun run src/index.ts"
+  }
+}

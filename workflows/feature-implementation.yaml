@@ -1,0 +1,49 @@
+id: feature-implementation
+name: Feature Implementation Workflow
+description: Director decomposes the feature, Implementer codes, Reviewer reviews, human approves PR.
+
+nodes:
+  - id: trigger
+    type: trigger
+    kind: manual
+
+  - id: director
+    type: role
+    role: director
+    provider: claude-code
+    lifetime: per-workflow
+
+  - id: implementer
+    type: role
+    role: implementer
+    provider: claude-code
+    lifetime: per-task
+
+  - id: reviewer
+    type: role
+    role: reviewer
+    provider: codex
+    lifetime: per-task
+
+  - id: diff-ready
+    type: blackboard
+    schema:
+      branchUrl: string
+      diff: string
+      summary: string
+
+  - id: human-approve
+    type: human-gate
+    label: Approve PR
+
+  - id: pr-creator
+    type: sink
+    kind: github-pr
+
+edges:
+  - { from: trigger,       to: director,      type: triggers }
+  - { from: director,      to: implementer,   type: delegates }
+  - { from: implementer,   to: diff-ready,    type: publishes }
+  - { from: diff-ready,    to: reviewer,      type: subscribes }
+  - { from: reviewer,      to: human-approve, type: triggers }
+  - { from: human-approve, to: pr-creator,    type: triggers }

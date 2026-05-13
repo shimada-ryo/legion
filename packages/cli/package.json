@@ -1,0 +1,16 @@
+{
+  "name": "@legion/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "legion": "./src/index.ts"
+  },
+  "dependencies": {
+    "@legion/core": "workspace:*",
+    "@legion/runtime": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

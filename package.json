@@ -1,0 +1,16 @@
+{
+  "name": "legion",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  },
+  "scripts": {
+    "typecheck": "bun run --filter='*' typecheck"
+  }
+}

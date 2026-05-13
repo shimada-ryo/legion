@@ -1,0 +1,42 @@
+id: bug-fix
+name: Bug Fix Workflow
+description: Simple bug fix flow triggered by a GitHub issue. Implementer fixes, Reviewer verifies, human approves.
+
+nodes:
+  - id: trigger
+    type: trigger
+    kind: github-issue
+
+  - id: implementer
+    type: role
+    role: implementer
+    provider: claude-code
+    lifetime: per-task
+
+  - id: reviewer
+    type: role
+    role: reviewer
+    provider: claude-code
+    lifetime: per-task
+
+  - id: fix-ready
+    type: blackboard
+    schema:
+      branchUrl: string
+      diff: string
+      rootCause: string
+
+  - id: human-approve
+    type: human-gate
+    label: Approve PR
+
+  - id: pr-creator
+    type: sink
+    kind: github-pr
+
+edges:
+  - { from: trigger,       to: implementer,   type: triggers }
+  - { from: implementer,   to: fix-ready,     type: publishes }
+  - { from: fix-ready,     to: reviewer,      type: subscribes }
+  - { from: reviewer,      to: human-approve, type: triggers }
+  - { from: human-approve, to: pr-creator,    type: triggers }
