@@ -170,11 +170,25 @@ class AgentInstanceStore {
 
 Phase 1 の `InstanceStore`（workflow_instances 管理）と同じパターン。予測行数: store 本体 ~120 行、テスト ~150 行。
 
-### 4.4 D-041: `ctx.adapters` を sessionId 単位に rekey
+### 4.4 D-041: `ctx.adapters` の値を adapter のみに簡素化し、approvalId→sessionId の side map を追加
 
-Phase 1 の `ctx.adapters` は workflowInstanceId をキーにしていたが、Phase 2 では 1 workflow に複数 agent が乗るため sessionId キーに変更する。
+Phase 1 の `ctx.adapters` は `Map<workflowInstanceId, { adapter, sessionId }>` で、1 workflow = 1 agent = 1 sessionId の前提で値に sessionId を埋め込んでいた。Phase 2 では 1 workflow に複数 agent が乗るため、この埋め込みが破綻する。
 
-- `POST /api/instances/:id/approvals/:approvalId` の解決経路: server プロセス内で `approvalId → sessionId` の in-memory map を持つ。`ApprovalOrchestrator` が `permission_request` を emit するときに同時にこの map に登録し、URL 経由の承認 POST はここを引いて該当 adapter に届ける。crash 後リスタートで未承認の approval は失われるが、Phase 2 narrow scope では Director も同様にロストする前提（orphan recovery で workflow ごと `failed` に書き直す）なので許容する。
+採用する形:
+
+- `adapters: Map<workflowInstanceId, AgentProvider>` — Director と Implementer は同じ Claude Code provider インスタンスを共有するので、provider は 1 workflow に 1 つで十分。値から sessionId を外す。
+- `approvalIdToSessionId: Map<approvalId, sessionId>` — server プロセス内に新設。`ApprovalOrchestrator` が `permission_request` を emit するときに同時にこの map に登録する。
+
+`POST /api/instances/:id/approvals/:approvalId` の解決経路:
+
+1. URL から `instanceId` と `approvalId` を取り出す。
+2. `approvalIdToSessionId.get(approvalId)` → sessionId。
+3. `adapters.get(instanceId)` → provider。
+4. `provider.approve(sessionId, approvalId)`。
+
+crash 後リスタートで未承認の approval は失われるが、Phase 2 narrow scope では Director も同様にロストする前提（orphan recovery で workflow ごと `failed` に書き直す）なので許容する。
+
+（初期ブレインストーミング時の方針は「`adapters` のキーを sessionId に rewrite」だったが、実装計画化時に refine。「同一 workflow の全 agent が同じ provider インスタンスを共有する」事実を踏まえると、provider lookup と session 識別を分離する方が API surface が小さくなる。）
 
 これは Phase 1 引き継ぎ書の「Phase 2 enablement concern #1」への対応。
 
