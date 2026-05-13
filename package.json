@@ -11,6 +11,7 @@
     "typescript": "^5.7.0"
   },
   "scripts": {
-    "typecheck": "bun run --filter='*' typecheck"
+    "typecheck": "bun run --filter='*' typecheck",
+    "test": "bun run --filter='*' test"
   }
 }
