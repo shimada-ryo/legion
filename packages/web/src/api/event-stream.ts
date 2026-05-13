@@ -7,7 +7,7 @@ export function useInstanceEventStream(instanceId: string | undefined): AgentEve
     if (!instanceId) return
     setEvents([])
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-    const url = `${proto}://${location.host}/ws/instances/${encodeURIComponent(instanceId)}/events`
+    const url = `${proto}://${location.host}/api/ws/instances/${encodeURIComponent(instanceId)}/events`
     const ws = new WebSocket(url)
     ws.onmessage = (e) => {
       try {

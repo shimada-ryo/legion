@@ -6,10 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/templates': 'http://localhost:5500',
-      '/instances': 'http://localhost:5500',
-      '/workflows': 'http://localhost:5500',
-      '/ws': { target: 'ws://localhost:5500', ws: true },
+      '/api': { target: 'http://localhost:5500', ws: true, changeOrigin: true },
     },
   },
 })

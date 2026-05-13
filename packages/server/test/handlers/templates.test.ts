@@ -63,9 +63,9 @@ afterEach(async () => {
   await rm(baseDir, { recursive: true, force: true })
 })
 
-describe('GET /templates', () => {
+describe('GET /api/templates', () => {
   test('returns array of template summaries', async () => {
-    const res = await fetch(`http://localhost:${server.port}/templates`)
+    const res = await fetch(`http://localhost:${server.port}/api/templates`)
     expect(res.status).toBe(200)
     const body = (await res.json()) as Array<{ id: string; name: string; nodeCount: number }>
     expect(Array.isArray(body)).toBe(true)
@@ -75,9 +75,9 @@ describe('GET /templates', () => {
   })
 })
 
-describe('GET /templates/:id', () => {
+describe('GET /api/templates/:id', () => {
   test('returns the full template', async () => {
-    const res = await fetch(`http://localhost:${server.port}/templates/feature-implementation`)
+    const res = await fetch(`http://localhost:${server.port}/api/templates/feature-implementation`)
     expect(res.status).toBe(200)
     const body = (await res.json()) as { id: string; nodes: unknown[] }
     expect(body.id).toBe('feature-implementation')
@@ -85,7 +85,7 @@ describe('GET /templates/:id', () => {
   })
 
   test('returns 404 for unknown template', async () => {
-    const res = await fetch(`http://localhost:${server.port}/templates/nope`)
+    const res = await fetch(`http://localhost:${server.port}/api/templates/nope`)
     expect(res.status).toBe(404)
   })
 })

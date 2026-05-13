@@ -81,10 +81,10 @@ afterEach(async () => {
   await repo.cleanup()
 })
 
-describe('WS /ws/instances/:id/events', () => {
+describe('WS /api/ws/instances/:id/events', () => {
   test('streams history then live events', async () => {
     // Trigger an instance and wait for events to land in the log
-    const trig = await fetch(`http://localhost:${server.port}/workflows/trigger`, {
+    const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -95,7 +95,7 @@ describe('WS /ws/instances/:id/events', () => {
     const { workflowInstanceId } = (await trig.json()) as { workflowInstanceId: string }
     await new Promise((r) => setTimeout(r, 100))
 
-    const url = `ws://localhost:${server.port}/ws/instances/${workflowInstanceId}/events`
+    const url = `ws://localhost:${server.port}/api/ws/instances/${workflowInstanceId}/events`
     const ws = new WebSocket(url)
     const received: { id?: string; type?: string }[] = []
     ws.addEventListener('message', (e) => {

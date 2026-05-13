@@ -17,20 +17,20 @@ export function route(
 ): Response | Promise<Response> {
   const url = new URL(req.url)
   const path = url.pathname
-  if (path === '/templates' || path.startsWith('/templates/')) {
+  if (path === '/api/templates' || path.startsWith('/api/templates/')) {
     return handleTemplates(req, ctx)
   }
-  if (path === '/workflows/trigger') {
+  if (path === '/api/workflows/trigger') {
     return handleWorkflowsTrigger(req, ctx)
   }
-  if (path === '/instances') {
+  if (path === '/api/instances') {
     return handleInstancesList(req, ctx)
   }
-  const a = path.match(/^\/instances\/([^/]+)\/approvals\/([^/]+)$/)
+  const a = path.match(/^\/api\/instances\/([^/]+)\/approvals\/([^/]+)$/)
   if (a) return handleApproval(a[1]!, a[2]!, req, ctx)
-  const d = path.match(/^\/instances\/([^/]+)\/diff$/)
+  const d = path.match(/^\/api\/instances\/([^/]+)\/diff$/)
   if (d) return handleInstanceDiff(d[1]!, ctx)
-  const m = path.match(/^\/instances\/([^/]+)$/)
+  const m = path.match(/^\/api\/instances\/([^/]+)$/)
   if (m) return handleInstanceDetail(m[1]!, ctx)
   return new Response('Not Found', { status: 404 })
 }

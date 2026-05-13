@@ -49,7 +49,7 @@ export async function startApp(opts: AppOptions): Promise<AppHandle> {
     port: opts.port,
     fetch: (req, srv) => {
       const url = new URL(req.url)
-      const m = url.pathname.match(/^\/ws\/instances\/([^/]+)\/events$/)
+      const m = url.pathname.match(/^\/api\/ws\/instances\/([^/]+)\/events$/)
       if (m) {
         const upgraded = srv.upgrade(req, {
           data: { workflowInstanceId: m[1]!, stop: null } satisfies WsData,

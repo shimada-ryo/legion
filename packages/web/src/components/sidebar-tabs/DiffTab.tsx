@@ -12,7 +12,7 @@ export default function DiffTab({ instanceId }: { instanceId: string }) {
 
   useEffect(() => {
     let alive = true
-    fetch(`/instances/${encodeURIComponent(instanceId)}/diff`)
+    fetch(`/api/instances/${encodeURIComponent(instanceId)}/diff`)
       .then((r) => r.json() as Promise<DiffEntry[]>)
       .then((d) => {
         if (alive) setItems(d)

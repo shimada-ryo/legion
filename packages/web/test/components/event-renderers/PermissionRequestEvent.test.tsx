@@ -52,7 +52,7 @@ describe('PermissionRequestEvent', () => {
     fireEvent.click(getByText('Approve'))
     await new Promise((r) => setTimeout(r, 5))
     expect(capturedFetchArgs).toHaveLength(1)
-    expect(capturedFetchArgs[0]?.url).toBe('/instances/inst-1/approvals/a1')
+    expect(capturedFetchArgs[0]?.url).toBe('/api/instances/inst-1/approvals/a1')
     const body = JSON.parse(capturedFetchArgs[0]?.init.body ?? '{}')
     expect(body.decision).toBe('approve')
   })

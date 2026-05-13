@@ -81,9 +81,9 @@ afterEach(async () => {
   await repo.cleanup()
 })
 
-describe('POST /workflows/trigger', () => {
+describe('POST /api/workflows/trigger', () => {
   test('triggers a workflow and returns the new instance id', async () => {
-    const res = await fetch(`http://localhost:${server.port}/workflows/trigger`, {
+    const res = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -97,7 +97,7 @@ describe('POST /workflows/trigger', () => {
   })
 
   test('returns 404 for unknown templateId', async () => {
-    const res = await fetch(`http://localhost:${server.port}/workflows/trigger`, {
+    const res = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ templateId: 'nope', userPrompt: '' }),
@@ -106,7 +106,7 @@ describe('POST /workflows/trigger', () => {
   })
 
   test('returns 400 when templateId missing', async () => {
-    const res = await fetch(`http://localhost:${server.port}/workflows/trigger`, {
+    const res = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ userPrompt: 'x' }),
@@ -115,9 +115,9 @@ describe('POST /workflows/trigger', () => {
   })
 })
 
-describe('GET /instances and /instances/:id', () => {
+describe('GET /api/instances and /api/instances/:id', () => {
   test('list and detail work after a trigger', async () => {
-    const trig = await fetch(`http://localhost:${server.port}/workflows/trigger`, {
+    const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -129,13 +129,13 @@ describe('GET /instances and /instances/:id', () => {
     // Wait for the streaming consumer to drain mock messages
     await new Promise((r) => setTimeout(r, 100))
 
-    const listRes = await fetch(`http://localhost:${server.port}/instances`)
+    const listRes = await fetch(`http://localhost:${server.port}/api/instances`)
     const list = (await listRes.json()) as Array<{ id: string }>
     expect(Array.isArray(list)).toBe(true)
     expect(list.some((i) => i.id === workflowInstanceId)).toBe(true)
 
     const detailRes = await fetch(
-      `http://localhost:${server.port}/instances/${workflowInstanceId}`,
+      `http://localhost:${server.port}/api/instances/${workflowInstanceId}`,
     )
     const detail = (await detailRes.json()) as { id: string; events: unknown[] }
     expect(detail.id).toBe(workflowInstanceId)

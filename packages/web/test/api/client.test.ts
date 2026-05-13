@@ -16,9 +16,9 @@ beforeEach(() => {
 })
 
 describe('triggerWorkflow', () => {
-  test('POSTs to /workflows/trigger with templateId and userPrompt', async () => {
+  test('POSTs to /api/workflows/trigger with templateId and userPrompt', async () => {
     await triggerWorkflow('feature-implementation', 'do thing')
-    expect(captured[0]?.url).toBe('/workflows/trigger')
+    expect(captured[0]?.url).toBe('/api/workflows/trigger')
     expect(captured[0]?.init.method).toBe('POST')
     const body = JSON.parse(captured[0]?.init.body ?? '{}')
     expect(body).toEqual({
@@ -37,7 +37,7 @@ describe('resolveApproval', () => {
       },
     ) as unknown as typeof fetch
     await resolveApproval('inst-1', 'app-1', 'approve')
-    expect(captured[0]?.url).toBe('/instances/inst-1/approvals/app-1')
+    expect(captured[0]?.url).toBe('/api/instances/inst-1/approvals/app-1')
     const body = JSON.parse(captured[0]?.init.body ?? '{}')
     expect(body.decision).toBe('approve')
   })

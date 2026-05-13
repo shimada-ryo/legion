@@ -74,7 +74,7 @@ function buildApprovalAdapter(): {
   return { adapter, approvedIds, deniedIds }
 }
 
-describe('POST /instances/:id/approvals/:approvalId', () => {
+describe('POST /api/instances/:id/approvals/:approvalId', () => {
   test('approve resolves a pending approval via the adapter', async () => {
     const { adapter, approvedIds } = buildApprovalAdapter()
     const db = new Database(':memory:')
@@ -90,7 +90,7 @@ describe('POST /instances/:id/approvals/:approvalId', () => {
       worktreeBaseDir: baseDir,
       adapterFactory: () => adapter,
     })
-    const trig = await fetch(`http://localhost:${server.port}/workflows/trigger`, {
+    const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ templateId: 'feature-implementation', userPrompt: '' }),
@@ -100,7 +100,7 @@ describe('POST /instances/:id/approvals/:approvalId', () => {
     await new Promise((r) => setTimeout(r, 50))
 
     const res = await fetch(
-      `http://localhost:${server.port}/instances/${workflowInstanceId}/approvals/app-1`,
+      `http://localhost:${server.port}/api/instances/${workflowInstanceId}/approvals/app-1`,
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -126,7 +126,7 @@ describe('POST /instances/:id/approvals/:approvalId', () => {
       worktreeBaseDir: baseDir,
       adapterFactory: () => adapter,
     })
-    const trig = await fetch(`http://localhost:${server.port}/workflows/trigger`, {
+    const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ templateId: 'feature-implementation', userPrompt: '' }),
@@ -135,7 +135,7 @@ describe('POST /instances/:id/approvals/:approvalId', () => {
     await new Promise((r) => setTimeout(r, 50))
 
     const res = await fetch(
-      `http://localhost:${server.port}/instances/${workflowInstanceId}/approvals/app-1`,
+      `http://localhost:${server.port}/api/instances/${workflowInstanceId}/approvals/app-1`,
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -162,7 +162,7 @@ describe('POST /instances/:id/approvals/:approvalId', () => {
       adapterFactory: () => adapter,
     })
     const res = await fetch(
-      `http://localhost:${server.port}/instances/unknown-instance/approvals/app-1`,
+      `http://localhost:${server.port}/api/instances/unknown-instance/approvals/app-1`,
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -187,7 +187,7 @@ describe('POST /instances/:id/approvals/:approvalId', () => {
       worktreeBaseDir: baseDir,
       adapterFactory: () => adapter,
     })
-    const trig = await fetch(`http://localhost:${server.port}/workflows/trigger`, {
+    const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ templateId: 'feature-implementation', userPrompt: '' }),
@@ -196,7 +196,7 @@ describe('POST /instances/:id/approvals/:approvalId', () => {
     await new Promise((r) => setTimeout(r, 50))
 
     const res = await fetch(
-      `http://localhost:${server.port}/instances/${workflowInstanceId}/approvals/app-1`,
+      `http://localhost:${server.port}/api/instances/${workflowInstanceId}/approvals/app-1`,
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
