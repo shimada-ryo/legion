@@ -8,6 +8,7 @@ import { InstanceStore } from '@legion/runtime/orchestrator/instance-store'
 import { EventLog } from '@legion/runtime/eventlog/eventlog'
 import { LocalWorktreeProvider } from '@legion/runtime/workspace/local-worktree-provider'
 import { route } from './http/routes'
+import { wsHandlers, type WsData } from './ws/event-stream'
 
 export interface AppOptions {
   port: number
@@ -44,9 +45,21 @@ export async function startApp(opts: AppOptions): Promise<AppHandle> {
     }),
     adapters: new Map(),
   }
-  const server: BunServer = Bun.serve({
+  const server: BunServer = Bun.serve<WsData>({
     port: opts.port,
-    fetch: (req, srv) => route(req, srv, runtime),
+    fetch: (req, srv) => {
+      const url = new URL(req.url)
+      const m = url.pathname.match(/^\/ws\/instances\/([^/]+)\/events$/)
+      if (m) {
+        const upgraded = srv.upgrade(req, {
+          data: { workflowInstanceId: m[1]!, stop: null } satisfies WsData,
+        })
+        if (upgraded) return undefined as unknown as Response
+        return new Response('Upgrade failed', { status: 400 })
+      }
+      return route(req, srv, runtime)
+    },
+    websocket: wsHandlers(runtime),
   })
   return {
     port: server.port ?? opts.port,
