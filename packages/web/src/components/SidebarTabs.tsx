@@ -3,6 +3,7 @@ import type { WorkflowTemplate, AgentEvent } from '@legion/core'
 import OverviewTab from './sidebar-tabs/OverviewTab'
 import EventsTab from './sidebar-tabs/EventsTab'
 import DiffTab from './sidebar-tabs/DiffTab'
+import TasksTab from './sidebar-tabs/TasksTab'
 
 export interface SidebarTabsProps {
   instanceId: string
@@ -40,7 +41,7 @@ export default function SidebarTabs(props: SidebarTabsProps) {
         )}
         {tab === 'Events' && <EventsTab events={props.events} instanceId={props.instanceId} />}
         {tab === 'Diff' && <DiffTab instanceId={props.instanceId} />}
-        {tab === 'Tasks' && <div>Tasks (Task 10)</div>}
+        {tab === 'Tasks' && <TasksTab />}
       </div>
     </div>
   )
