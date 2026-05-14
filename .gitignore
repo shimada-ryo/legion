@@ -15,6 +15,7 @@ Thumbs.db
 .idea/
 
 .claude/local/
+.claude/worktrees/
 .claude/settings.local.json
 
 coverage/
