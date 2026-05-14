@@ -2,9 +2,16 @@ import type { Codex } from '@openai/codex-sdk'
 import type { LaunchRequest } from '@legion/core'
 import type { CodexSession } from './codex-session-store'
 import { ulid } from 'ulid'
+import { debugLog } from '../../util/logger'
 
 export function launchCodexSession(codex: Codex, req: LaunchRequest): CodexSession {
   const sessionId = ulid()
+  debugLog('codex.launch', {
+    sessionId,
+    workdir: req.workdir,
+    role: req.role,
+    hasOutputSchema: req.outputSchema !== undefined,
+  })
   const thread = codex.startThread({
     workingDirectory: req.workdir,
     sandboxMode: 'read-only',

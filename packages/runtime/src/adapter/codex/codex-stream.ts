@@ -1,6 +1,7 @@
 import { ulid } from 'ulid'
 import type { AgentEvent } from '@legion/core'
 import type { CodexSessionStore } from './codex-session-store'
+import { debugLog } from '../../util/logger'
 
 export async function* streamCodexSession(
   store: CodexSessionStore,
@@ -12,16 +13,25 @@ export async function* streamCodexSession(
   }
   if (session.outputSchema !== undefined) turnOpts.outputSchema = session.outputSchema
 
+  debugLog('codex.stream.start', { sessionId, role: session.role })
   const { events } = await session.thread.runStreamed(session.prompt, turnOpts)
 
+  let rawCount = 0
+  let yielded = 0
   for await (const ev of events) {
-    const translated = translateEvent(ev as RawEvent, sessionId)
-    if (translated) yield translated
+    rawCount++
     const t = (ev as RawEvent).type
+    debugLog('codex.stream.event', { sessionId, rawCount, type: t })
+    const translated = translateEvent(ev as RawEvent, sessionId)
+    if (translated) {
+      yielded++
+      yield translated
+    }
     if (t === 'turn.completed' || t === 'turn.failed' || t === 'error') {
       break
     }
   }
+  debugLog('codex.stream.done', { sessionId, rawCount, yielded })
 }
 
 interface RawEvent {

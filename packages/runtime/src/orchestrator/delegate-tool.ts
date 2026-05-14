@@ -14,6 +14,7 @@ import { resolveDelegateTargets } from './graph-walker'
 import { PENDING_SESSION_ID, type AgentInstanceStore } from '../store/agent-instance-store'
 import type { WorkspaceProvider } from '../workspace/provider'
 import type { BlackboardStore } from '../store/blackboard-store'
+import { debugLog } from '../util/logger'
 
 // OpenAI's response_format JSON Schema requires `additionalProperties: false`
 // (verified via contract test against real Codex SDK / OpenAI API, 2026-05-15).
@@ -104,8 +105,21 @@ export class DelegateToolHandler {
   constructor(private readonly deps: DelegateToolDeps) {}
 
   async handle(input: DelegateToolInput): Promise<DelegateToolOutput> {
+    debugLog('delegate.handle.enter', {
+      workflowId: this.deps.workflowInstanceId,
+      parentAgentId: this.deps.parentAgentInstanceId,
+      role: input.role,
+    })
     const { agentInstanceId, branchName, workspacePath, edgeType, provider } =
       await this.resolveSpawnInputs(input)
+    debugLog('delegate.handle.spawn', {
+      workflowId: this.deps.workflowInstanceId,
+      agentInstanceId,
+      branchName,
+      workspacePath,
+      edgeType,
+      providerId: provider.id,
+    })
 
     this.publishSystemEvent(DELEGATE_TOPICS.START, {
       fromAgentInstanceId: this.deps.parentAgentInstanceId,
@@ -123,6 +137,12 @@ export class DelegateToolHandler {
       provider,
       outputSchema,
     )
+    debugLog('delegate.handle.drained', {
+      agentInstanceId,
+      status,
+      summaryLen: summary.length,
+      hasError: error !== undefined,
+    })
 
     this.publishSystemEvent(DELEGATE_TOPICS.RESULT, {
       agentInstanceId,
@@ -133,6 +153,11 @@ export class DelegateToolHandler {
 
     if (edgeType === 'reviews') {
       const parsed = parseReviewerOutput(summary)
+      debugLog('delegate.handle.reviewerParse', {
+        agentInstanceId,
+        decision: parsed.payload?.decision,
+        parsedOk: parsed.payload !== undefined,
+      })
       if (parsed.payload !== undefined) {
         this.publishSystemEvent(DELEGATE_TOPICS.REVIEW_DECISION, {
           agentInstanceId,
@@ -273,6 +298,12 @@ export class DelegateToolHandler {
     let sessionId: string | undefined
 
     try {
+      debugLog('runSpawned.launch.start', {
+        agentInstanceId,
+        providerId: provider.id,
+        role: input.role,
+        hasOutputSchema: outputSchema !== undefined,
+      })
       const handle = await provider.launch({
         workdir: workspacePath,
         role: input.role,
@@ -280,16 +311,26 @@ export class DelegateToolHandler {
         ...(outputSchema !== undefined ? { outputSchema } : {}),
       })
       sessionId = handle.sessionId
+      debugLog('runSpawned.launch.done', { agentInstanceId, sessionId })
       this.deps.agentInstanceStore.updateSessionId(agentInstanceId, handle.sessionId)
       this.deps.agentInstanceStore.updateStatus(agentInstanceId, 'running')
 
+      let evtCount = 0
       for await (const evt of provider.stream(handle.sessionId)) {
+        evtCount++
         this.deps.eventLog.write(evt)
-        if (evt.type === 'message') {
-          const t = (evt.payload as { text?: string }).text
+        if (evt.type === 'message' || evt.type === 'assistant_message') {
+          const p = evt.payload as { text?: string; content?: string }
+          const t = p.text ?? p.content
           if (typeof t === 'string') summary = t
         }
       }
+      debugLog('runSpawned.drain.done', {
+        agentInstanceId,
+        sessionId,
+        evtCount,
+        summaryLen: summary.length,
+      })
     } catch (e) {
       status = 'failed'
       error = e instanceof Error ? e.message : String(e)

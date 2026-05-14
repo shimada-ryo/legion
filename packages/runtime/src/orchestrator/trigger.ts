@@ -13,6 +13,7 @@ import { DelegateToolHandler } from './delegate-tool'
 import { loadLegionConfig } from '../config/loader'
 import { runWorktreeSetup } from '../config/setup-runner'
 import type { BlackboardStore } from '../store/blackboard-store'
+import { debugLog } from '../util/logger'
 
 export interface TriggerInput {
   template: WorkflowTemplate
@@ -33,6 +34,10 @@ export interface TriggerResult {
 }
 
 export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResult> {
+  debugLog('trigger.start', {
+    templateId: input.template.id,
+    providers: [...input.providersByName.keys()],
+  })
   const triggerTargets = resolveTriggerTargets(input.template)
   if (triggerTargets.length === 0) {
     throw new Error(`template ${input.template.id} has no triggers→role edge`)
@@ -132,6 +137,11 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
 
   input.agentInstanceStore.updateSessionId(directorAgentInstanceId, handle.sessionId)
   input.agentInstanceStore.updateStatus(directorAgentInstanceId, 'running')
+  debugLog('trigger.directorLaunched', {
+    workflowId: instance.id,
+    directorAgentInstanceId,
+    sessionId: handle.sessionId,
+  })
 
   // Drain the stream in the background; events flow into the event log.
   void drainStream(input, directorProvider, instance.id, directorAgentInstanceId, handle.sessionId)
@@ -146,19 +156,24 @@ async function drainStream(
   sessionId: string,
 ): Promise<void> {
   try {
+    let evtCount = 0
     for await (const evt of provider.stream(sessionId)) {
+      evtCount++
       input.eventLog.append(workflowInstanceId, evt)
       if (evt.type === 'status_change') {
         const status = (evt.payload as { status?: string }).status
+        debugLog('drainStream.statusChange', { workflowInstanceId, status, evtCount })
         if (status === 'completed')
           input.instanceStore.updateStatus(workflowInstanceId, 'completed')
         if (status === 'failed')
           input.instanceStore.updateStatus(workflowInstanceId, 'failed')
       }
     }
+    debugLog('drainStream.done', { workflowInstanceId, evtCount })
     input.agentInstanceStore.setEndedAt(directorAgentInstanceId, new Date())
     input.agentInstanceStore.updateStatus(directorAgentInstanceId, 'completed')
   } catch (err) {
+    debugLog('drainStream.error', { workflowInstanceId, error: (err as Error).message })
     input.eventLog.append(workflowInstanceId, {
       id: ulid(),
       sessionId,
