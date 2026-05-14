@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -10,8 +10,10 @@ import {
   type NodeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import '../styles/react-flow.css'
 import type { WorkflowTemplate, TemplateNode } from '@legion/core'
 import type { AgentInstanceView } from '../types'
+import { useTheme } from '../theme/ThemeProvider'
 
 export interface CanvasOverlayProps {
   template: WorkflowTemplate
@@ -28,10 +30,10 @@ const NODE_BORDER: Record<TemplateNode['type'], string> = {
 }
 
 const STATUS_BG: Record<string, string> = {
-  starting: '#fff7d1',
-  running: '#e8f0ff',
-  completed: '#e6ffe6',
-  failed: '#ffe6e6',
+  starting: 'var(--node-bg-running)',
+  running: 'var(--node-bg-running)',
+  completed: 'var(--node-bg-success)',
+  failed: 'var(--node-bg-error)',
 }
 
 function mergeStatus(a: string | undefined, b: string): string {
@@ -61,13 +63,14 @@ interface StatusNodeData extends Record<string, unknown> {
  * (and future automation) can assert role coloring without parsing inline styles.
  */
 function StatusNode({ data }: NodeProps<Node<StatusNodeData>>) {
-  const bg = data.status ? (STATUS_BG[data.status] ?? 'white') : 'white'
+  const bg = data.status ? (STATUS_BG[data.status] ?? 'var(--node-bg)') : 'var(--node-bg)'
   return (
     <div
       data-status={data.status ?? undefined}
       style={{
         padding: 8,
         background: bg,
+        color: 'var(--fg-primary)',
         border: `2px solid ${data.borderColor}`,
         borderRadius: 6,
         fontSize: 12,
@@ -89,6 +92,13 @@ export default function CanvasOverlay({
   onSelectNode,
 }: CanvasOverlayProps) {
   const roleStatus = useMemo(() => deriveRoleStatus(agentInstances), [agentInstances])
+  const { resolved } = useTheme()
+
+  const [dotColor, setDotColor] = useState('')
+  useEffect(() => {
+    const cs = getComputedStyle(document.documentElement)
+    setDotColor(cs.getPropertyValue('--canvas-grid').trim())
+  }, [resolved])
 
   const nodes = useMemo<Node[]>(
     () =>
@@ -130,7 +140,7 @@ export default function CanvasOverlay({
         onPaneClick={() => onSelectNode(null)}
         fitView
       >
-        <Background />
+        <Background color={dotColor} />
         <Controls />
       </ReactFlow>
     </div>

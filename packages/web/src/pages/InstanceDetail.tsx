@@ -60,12 +60,12 @@ const layoutStyle: CSSProperties = {
 }
 const canvasStyle: CSSProperties = {
   gridArea: 'canvas',
-  borderRight: '1px solid #ddd',
+  borderRight: '1px solid var(--border-default)',
 }
 const sidebarStyle: CSSProperties = { gridArea: 'sidebar', overflowY: 'auto' }
 const eventLogStyle: CSSProperties = {
   gridArea: 'log',
-  borderTop: '1px solid #ddd',
+  borderTop: '1px solid var(--border-default)',
   overflowY: 'auto',
-  background: '#fafafa',
+  background: 'var(--bg-surface)',
 }

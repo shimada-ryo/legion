@@ -1,12 +1,31 @@
-import { describe, test, expect, afterEach } from 'bun:test'
+import type { ReactNode } from 'react'
+import { describe, test, expect, afterEach, beforeEach } from 'bun:test'
 import { render, cleanup } from '@testing-library/react'
 import CanvasOverlay from '../../src/components/CanvasOverlay'
+import { ThemeProvider } from '../../src/theme/ThemeProvider'
 import type { WorkflowTemplate } from '@legion/core'
 import type { AgentInstanceView } from '../../src/types'
+
+beforeEach(() => {
+  ;(window as any).matchMedia = () => ({
+    matches: false,
+    media: '',
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => true,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+  })
+})
 
 afterEach(() => {
   cleanup()
 })
+
+function renderWithTheme(ui: ReactNode) {
+  return render(<ThemeProvider>{ui}</ThemeProvider>)
+}
 
 const TEMPLATE: WorkflowTemplate = {
   id: 't',
@@ -22,7 +41,7 @@ const TEMPLATE: WorkflowTemplate = {
 describe('CanvasOverlay status coloring', () => {
   test('renders a node for every template node', () => {
     const instances: AgentInstanceView[] = []
-    const { container } = render(
+    const { container } = renderWithTheme(
       <CanvasOverlay template={TEMPLATE} agentInstances={instances} onSelectNode={() => {}} />,
     )
     expect(container.querySelectorAll('[data-id="director"]').length).toBeGreaterThan(0)
@@ -37,7 +56,7 @@ describe('CanvasOverlay status coloring', () => {
         startedAt: '', endedAt: null,
       },
     ]
-    const { container } = render(
+    const { container } = renderWithTheme(
       <CanvasOverlay template={TEMPLATE} agentInstances={instances} onSelectNode={() => {}} />,
     )
     const node = container.querySelector('[data-id="director"]') as HTMLElement | null
@@ -52,7 +71,7 @@ describe('CanvasOverlay status coloring', () => {
         startedAt: '', endedAt: '',
       },
     ]
-    const { container } = render(
+    const { container } = renderWithTheme(
       <CanvasOverlay template={TEMPLATE} agentInstances={instances} onSelectNode={() => {}} />,
     )
     const node = container.querySelector('[data-id="implementer"]') as HTMLElement | null

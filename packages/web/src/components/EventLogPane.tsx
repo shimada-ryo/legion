@@ -42,8 +42,8 @@ export default function EventLogPane({
   }, [events, blackboardMessages, filterSessionId, showBlackboard])
 
   return (
-    <div style={{ padding: 8, fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>
-      <div style={{ paddingBottom: 6, borderBottom: '1px solid #eee', marginBottom: 6 }}>
+    <div style={{ padding: 8, fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+      <div style={{ paddingBottom: 6, borderBottom: '1px solid var(--border-default)', marginBottom: 6 }}>
         <button
           onClick={() => setFilterSessionId(null)}
           style={{ marginRight: 8, fontWeight: filterSessionId === null ? 'bold' : 'normal' }}

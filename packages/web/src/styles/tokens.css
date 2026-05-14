@@ -30,6 +30,9 @@
 
   /* React Flow */
   --node-bg: #ffffff;
+  --node-bg-running: #e8f0ff;
+  --node-bg-success: #e6ffe6;
+  --node-bg-error: #ffe6e6;
   --node-border: #c7d2fe;
   --edge: #818cf8;
   --canvas-grid: #e0e7ff;
@@ -72,6 +75,9 @@
   --status-error: #f87171;
 
   --node-bg: #1e1b4b;
+  --node-bg-running: #1e2a5e;
+  --node-bg-success: #1e3a2a;
+  --node-bg-error: #3a1e1e;
   --node-border: #4338ca;
   --edge: #818cf8;
   --canvas-grid: #312e81;
