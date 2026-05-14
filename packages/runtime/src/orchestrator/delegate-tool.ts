@@ -15,8 +15,12 @@ import { PENDING_SESSION_ID, type AgentInstanceStore } from '../store/agent-inst
 import type { WorkspaceProvider } from '../workspace/provider'
 import type { BlackboardStore } from '../store/blackboard-store'
 
+// OpenAI's response_format JSON Schema requires `additionalProperties: false`
+// (verified via contract test against real Codex SDK / OpenAI API, 2026-05-15).
+// Omitting it surfaces as `invalid_json_schema` from the API.
 const REVIEW_OUTPUT_SCHEMA = {
   type: 'object',
+  additionalProperties: false,
   properties: {
     decision: { type: 'string', enum: ['approve', 'request-changes', 'reject'] },
     feedback: { type: 'string' },

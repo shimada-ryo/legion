@@ -80,6 +80,7 @@ describe.skipIf(!CONTRACT_ENABLED)('@openai/codex-sdk contract', () => {
       const turn = await thread.run('Return decision=approve', {
         outputSchema: {
           type: 'object',
+          additionalProperties: false,
           properties: {
             decision: { type: 'string', enum: ['approve', 'reject'] },
           },
