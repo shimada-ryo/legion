@@ -17,7 +17,7 @@ export async function handleWorkflowsTrigger(
   const template = ctx.options.templates.get(templateId)
   if (!template) return new Response('Unknown template', { status: 404 })
   const adapter = ctx.options.adapterFactory()
-  const { workflowInstanceId, sessionId } = await triggerWorkflow({
+  const { workflowInstanceId } = await triggerWorkflow({
     template,
     userPrompt,
     repoPath: ctx.options.repoPath,
@@ -25,9 +25,10 @@ export async function handleWorkflowsTrigger(
     workspaceProvider: ctx.worktree,
     adapter,
     instanceStore: ctx.store,
+    agentInstanceStore: ctx.agentInstanceStore,
     eventLog: ctx.log,
   })
-  ctx.adapters.set(workflowInstanceId, { adapter, sessionId })
+  ctx.adapters.set(workflowInstanceId, adapter)
   return Response.json({ workflowInstanceId }, { status: 202 })
 }
 

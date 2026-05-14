@@ -146,6 +146,40 @@ describe('POST /api/instances/:id/approvals/:approvalId', () => {
     expect(deniedIds).toEqual(['app-1'])
   })
 
+  test('returns 404 when approvalId is unknown', async () => {
+    const { adapter } = buildApprovalAdapter()
+    const db = new Database(':memory:')
+    initEventLogSchema(db)
+    initInstanceSchema(db)
+    const templates = new TemplateRegistry(join(REPO_ROOT, 'workflows'))
+    await templates.refresh()
+    server = await startApp({
+      port: 0,
+      db,
+      templates,
+      repoPath: repo.path,
+      worktreeBaseDir: baseDir,
+      adapterFactory: () => adapter,
+    })
+    const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ templateId: 'feature-implementation', userPrompt: '' }),
+    })
+    const { workflowInstanceId } = (await trig.json()) as { workflowInstanceId: string }
+    await new Promise((r) => setTimeout(r, 50))
+
+    const res = await fetch(
+      `http://localhost:${server.port}/api/instances/${workflowInstanceId}/approvals/unknown-approval`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ decision: 'approve' }),
+      },
+    )
+    expect(res.status).toBe(404)
+  })
+
   test('returns 404 when instance is unknown', async () => {
     const { adapter } = buildApprovalAdapter()
     const db = new Database(':memory:')

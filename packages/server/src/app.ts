@@ -5,6 +5,10 @@ type BunServer = Server<any>
 import type { AgentProvider } from '@legion/core'
 import type { TemplateRegistry } from '@legion/runtime/template/registry'
 import { InstanceStore } from '@legion/runtime/orchestrator/instance-store'
+import {
+  AgentInstanceStore,
+  initAgentInstanceSchema,
+} from '@legion/runtime/store/agent-instance-store'
 import { EventLog } from '@legion/runtime/eventlog/eventlog'
 import { LocalWorktreeProvider } from '@legion/runtime/workspace/local-worktree-provider'
 import { route } from './http/routes'
@@ -22,10 +26,13 @@ export interface AppOptions {
 export interface AppRuntime {
   options: AppOptions
   store: InstanceStore
+  agentInstanceStore: AgentInstanceStore
   log: EventLog
   worktree: LocalWorktreeProvider
-  /** workflowInstanceId → { adapter, sessionId }, populated on trigger. */
-  adapters: Map<string, { adapter: AgentProvider; sessionId: string }>
+  /** workflowInstanceId → provider (one provider instance per workflow; sessions live in agentInstanceStore). */
+  adapters: Map<string, AgentProvider>
+  /** approvalId → sessionId, populated when permission_request events flow through. */
+  approvalIdToSessionId: Map<string, string>
 }
 
 export interface AppHandle {
@@ -35,16 +42,25 @@ export interface AppHandle {
 }
 
 export async function startApp(opts: AppOptions): Promise<AppHandle> {
+  initAgentInstanceSchema(opts.db)
   const runtime: AppRuntime = {
     options: opts,
     store: new InstanceStore(opts.db),
+    agentInstanceStore: new AgentInstanceStore(opts.db),
     log: new EventLog(opts.db),
     worktree: new LocalWorktreeProvider({
       repoPath: opts.repoPath,
       baseDir: opts.worktreeBaseDir,
     }),
     adapters: new Map(),
+    approvalIdToSessionId: new Map(),
   }
+  runtime.log.onAny((evt) => {
+    if (evt.type === 'permission_request') {
+      const approvalId = (evt.payload as { approvalId?: string }).approvalId
+      if (approvalId) runtime.approvalIdToSessionId.set(approvalId, evt.sessionId)
+    }
+  })
   const server: BunServer = Bun.serve<WsData>({
     port: opts.port,
     fetch: (req, srv) => {
