@@ -26,9 +26,10 @@ export class LocalWorktreeProvider implements WorkspaceProvider {
     const path = this.pathFor(input)
     await mkdir(join(path, '..'), { recursive: true })
     if (DETACHED_ROLES.has(input.role)) {
+      const target = input.reviewTargetBranch ?? input.baseCommitSha
       await worktreeAdd(this.opts.repoPath, {
         path,
-        commit: input.baseCommitSha,
+        commit: target,
         detach: true,
       })
       return { ref: { kind: 'owned', path }, path }

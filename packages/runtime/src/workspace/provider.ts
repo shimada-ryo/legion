@@ -9,6 +9,8 @@ export interface WorkspaceCreateInput {
   role: string
   seq: number
   baseCommitSha: string
+  /** Phase 3 (D-052): when role='reviewer', detach at this branch tip instead of baseCommitSha. */
+  reviewTargetBranch?: string
 }
 
 export interface WorkspaceDescriptor {
