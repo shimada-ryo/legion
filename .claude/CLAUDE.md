@@ -13,6 +13,21 @@
 - Do NOT include `Co-Authored-By: Claude <...>` trailers. This is a personal project; do not attribute commits to the AI.
 - Keep the subject line concise (under 70 chars). Use the body for additional context.
 
+## Test output / scratch files
+
+Do not redirect test output, debug logs, or any other scratch artifact into
+the project root. `.gitignore` hides `*.log` from `git status`, so these
+files accumulate invisibly across sessions and clutter the workspace.
+
+- For interactive inspection: pipe to the terminal and read it there.
+- For persisted output: write under `tmp/test-logs/` (gitignored). Create
+  the directory on demand; do not check it in.
+- Clean up any scratch files you create before the session ends, even if
+  they are gitignored.
+
+Applies to: redirected `bun test` / `vitest` output, dumped JSON state,
+ad-hoc `console.log` files, recorded HTTP traces, etc.
+
 ## Line Count Awareness
 
 Pay close attention to line counts at every stage. While drafting an

@@ -25,4 +25,6 @@ coverage/
 *.tmp
 *.swp
 
+tmp/
+
 *.code-workspace
