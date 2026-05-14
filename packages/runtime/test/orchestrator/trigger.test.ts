@@ -12,6 +12,10 @@ import {
   InstanceStore,
   initInstanceSchema,
 } from '@legion/runtime/orchestrator/instance-store'
+import {
+  AgentInstanceStore,
+  initAgentInstanceSchema,
+} from '@legion/runtime/store/agent-instance-store'
 import { triggerWorkflow } from '@legion/runtime/orchestrator/trigger'
 import type { WorkflowTemplate } from '@legion/core'
 
@@ -31,6 +35,22 @@ const TEMPLATE: WorkflowTemplate = {
   edges: [{ from: 'trig', to: 'impl', type: 'triggers' }],
 }
 
+const DIRECTOR_TEMPLATE: WorkflowTemplate = {
+  id: 'echo-director',
+  name: 'Echo Director',
+  nodes: [
+    { type: 'trigger', id: 'trig', kind: 'manual' },
+    {
+      type: 'role',
+      id: 'director',
+      role: 'director',
+      provider: 'claude-code',
+      lifetime: 'per-workflow',
+    },
+  ],
+  edges: [{ from: 'trig', to: 'director', type: 'triggers' }],
+}
+
 let repo: TempRepo
 let baseDir: string
 let db: Database
@@ -41,6 +61,7 @@ beforeEach(async () => {
   db = new Database(':memory:')
   initEventLogSchema(db)
   initInstanceSchema(db)
+  initAgentInstanceSchema(db)
 })
 
 afterEach(async () => {
@@ -65,6 +86,7 @@ describe('triggerWorkflow', () => {
     }
     const adapter = new ClaudeCodeAgentSDKProvider({ query: queryMock })
     const store = new InstanceStore(db)
+    const agentInstanceStore = new AgentInstanceStore(db)
     const log = new EventLog(db)
     const result = await triggerWorkflow({
       template: TEMPLATE,
@@ -74,6 +96,7 @@ describe('triggerWorkflow', () => {
       workspaceProvider: wt,
       adapter,
       instanceStore: store,
+      agentInstanceStore,
       eventLog: log,
     })
     expect(result.workflowInstanceId).toBeDefined()
@@ -103,6 +126,7 @@ describe('triggerWorkflow', () => {
       })()
     const adapter = new ClaudeCodeAgentSDKProvider({ query: queryMock })
     const store = new InstanceStore(db)
+    const agentInstanceStore = new AgentInstanceStore(db)
     const log = new EventLog(db)
     const result = await triggerWorkflow({
       template: TEMPLATE,
@@ -112,6 +136,7 @@ describe('triggerWorkflow', () => {
       workspaceProvider: wt,
       adapter,
       instanceStore: store,
+      agentInstanceStore,
       eventLog: log,
     })
     await new Promise((r) => setTimeout(r, 50))
@@ -120,5 +145,40 @@ describe('triggerWorkflow', () => {
     expect(worktreePath).toBeDefined()
     const marker = await readFile(join(worktreePath!, 'setup-marker.txt'), 'utf-8')
     expect(marker.trim()).toBe('hello')
+  })
+
+  test('persists Director into agent_instances', async () => {
+    const wt = new LocalWorktreeProvider({ repoPath: repo.path, baseDir })
+    const queryMock = (): AsyncIterable<unknown> =>
+      (async function* () {
+        yield { type: 'system', subtype: 'init', session_id: 'sess-1', model: 'm' }
+        yield { type: 'result', subtype: 'success' }
+      })()
+    const adapter = new ClaudeCodeAgentSDKProvider({ query: queryMock })
+    const store = new InstanceStore(db)
+    const agentInstanceStore = new AgentInstanceStore(db)
+    const log = new EventLog(db)
+    const result = await triggerWorkflow({
+      template: DIRECTOR_TEMPLATE,
+      userPrompt: 'do work',
+      repoPath: repo.path,
+      baseRef: 'HEAD',
+      workspaceProvider: wt,
+      adapter,
+      instanceStore: store,
+      agentInstanceStore,
+      eventLog: log,
+    })
+    // Wait for the streaming consumer to drain
+    await new Promise((r) => setTimeout(r, 50))
+    const rows = agentInstanceStore.listByWorkflow(result.workflowInstanceId)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.roleNodeId).toBe('director')
+    expect(rows[0]!.parentAgentInstanceId).toBeNull()
+    expect(rows[0]!.spawnEdgeId).toBeNull()
+    expect(rows[0]!.workspaceKind).toBe('owned')
+    // Director worktree is --detach, so branchName must be null.
+    expect(rows[0]!.branchName).toBeNull()
+    expect(rows[0]!.endedAt).not.toBeNull()
   })
 })
