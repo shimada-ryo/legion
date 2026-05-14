@@ -50,6 +50,36 @@ async function awaitWorkflow(
   throw new Error(`timed out after ${timeoutMs}ms; last status: ${store.get(wfId)?.status}`)
 }
 
+function dumpStateOnFailure(
+  label: string,
+  wfId: string,
+  agentStore: AgentInstanceStore,
+  log: EventLog,
+  blackboard: BlackboardStore,
+): void {
+  // eslint-disable-next-line no-console
+  console.error(`\n=== ${label} (wf=${wfId}) ===`)
+  const agents = agentStore.listByWorkflow(wfId)
+  // eslint-disable-next-line no-console
+  console.error('agent_instances:', agents.map((a) => ({
+    id: a.id,
+    role: a.roleNodeId,
+    status: a.status,
+    parent: a.parentAgentInstanceId,
+    branch: a.branchName,
+  })))
+  const bbs = blackboard.listByWorkflow(wfId).map((m) => ({ topic: m.topic, at: m.publishedAt, payload: m.payload }))
+  // eslint-disable-next-line no-console
+  console.error('blackboard:', bbs)
+  const events = log.history(wfId).slice(-30).map((e) => ({
+    sid: e.sessionId.slice(0, 8),
+    type: e.type,
+    payload: typeof e.payload === 'object' ? JSON.stringify(e.payload).slice(0, 120) : e.payload,
+  }))
+  // eslint-disable-next-line no-console
+  console.error('last 30 events:', events)
+}
+
 function decisions(messages: BlackboardMessage[]): string[] {
   return messages
     .filter((m) => m.topic === 'system.review.decision')
@@ -103,7 +133,16 @@ describe.skipIf(!HAS_AUTH)('Phase 3 delegate flow with Reviewer (real SDK)', () 
           blackboardStore: blackboard,
         })
 
-        const finalStatus = await awaitWorkflow(store, workflowInstanceId, 230_000)
+        let finalStatus: 'completed' | 'failed'
+        try {
+          finalStatus = await awaitWorkflow(store, workflowInstanceId, 480_000)
+        } catch (err) {
+          dumpStateOnFailure('approve-round TIMEOUT', workflowInstanceId, agentStore, log, blackboard)
+          throw err
+        }
+        if (finalStatus !== 'completed') {
+          dumpStateOnFailure('approve-round NOT COMPLETED', workflowInstanceId, agentStore, log, blackboard)
+        }
         expect(finalStatus).toBe('completed')
 
         const rows = agentStore.listByWorkflow(workflowInstanceId)
@@ -130,7 +169,7 @@ describe.skipIf(!HAS_AUTH)('Phase 3 delegate flow with Reviewer (real SDK)', () 
         await repo.cleanup()
       }
     },
-    { timeout: 240_000 },
+    { timeout: 500_000 },
   )
 
   test(
@@ -185,7 +224,16 @@ describe.skipIf(!HAS_AUTH)('Phase 3 delegate flow with Reviewer (real SDK)', () 
           blackboardStore: blackboard,
         })
 
-        const finalStatus = await awaitWorkflow(store, workflowInstanceId, 350_000)
+        let finalStatus: 'completed' | 'failed'
+        try {
+          finalStatus = await awaitWorkflow(store, workflowInstanceId, 720_000)
+        } catch (err) {
+          dumpStateOnFailure('retry-round TIMEOUT', workflowInstanceId, agentStore, log, blackboard)
+          throw err
+        }
+        if (finalStatus !== 'completed') {
+          dumpStateOnFailure('retry-round NOT COMPLETED', workflowInstanceId, agentStore, log, blackboard)
+        }
         expect(finalStatus).toBe('completed')
 
         const rows = agentStore.listByWorkflow(workflowInstanceId)
@@ -210,6 +258,6 @@ describe.skipIf(!HAS_AUTH)('Phase 3 delegate flow with Reviewer (real SDK)', () 
         await repo.cleanup()
       }
     },
-    { timeout: 360_000 },
+    { timeout: 740_000 },
   )
 })
