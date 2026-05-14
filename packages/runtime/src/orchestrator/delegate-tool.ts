@@ -14,6 +14,54 @@ import { resolveDelegateTargets } from './graph-walker'
 import { PENDING_SESSION_ID, type AgentInstanceStore } from '../store/agent-instance-store'
 import type { WorkspaceProvider } from '../workspace/provider'
 
+const REVIEW_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    decision: { type: 'string', enum: ['approve', 'request-changes', 'reject'] },
+    feedback: { type: 'string' },
+    notes:    { type: 'string' },
+  },
+  required: ['decision'],
+} as const
+
+interface ReviewPayload {
+  decision: 'approve' | 'request-changes' | 'reject'
+  feedback?: string
+  notes?: string
+}
+
+function parseReviewerOutput(
+  rawAssistantMessage: string,
+): { payload?: ReviewPayload; freeFormSummary: string } {
+  // Strategy 1: whole body is JSON
+  const trimmed = rawAssistantMessage.trim()
+  try {
+    const obj = JSON.parse(trimmed) as ReviewPayload
+    if (obj.decision) {
+      return { payload: obj, freeFormSummary: obj.notes ?? '' }
+    }
+  } catch {
+    // fall through
+  }
+
+  // Strategy 2: extract first ```json fenced block
+  const fenceMatch = rawAssistantMessage.match(/```json\s*([\s\S]*?)```/i)
+  if (fenceMatch) {
+    try {
+      const captured = fenceMatch[1] ?? ''
+      const obj = JSON.parse(captured) as ReviewPayload
+      if (obj.decision) {
+        const before = rawAssistantMessage.slice(0, fenceMatch.index ?? 0).trim()
+        return { payload: obj, freeFormSummary: before }
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  return { freeFormSummary: rawAssistantMessage }
+}
+
 export interface EventLogWriter {
   write(evt: AgentEvent): void
 }
@@ -35,12 +83,29 @@ export class DelegateToolHandler {
   constructor(private readonly deps: DelegateToolDeps) {}
 
   async handle(input: DelegateToolInput): Promise<DelegateToolOutput> {
-    const { agentInstanceId, branchName, workspacePath } = await this.resolveSpawnInputs(input)
+    const { agentInstanceId, branchName, workspacePath, edgeType } =
+      await this.resolveSpawnInputs(input)
+    const outputSchema = edgeType === 'reviews' ? REVIEW_OUTPUT_SCHEMA : undefined
     const { summary, status, error } = await this.runSpawnedAgent(
       agentInstanceId,
       input,
       workspacePath,
+      outputSchema,
     )
+
+    if (edgeType === 'reviews') {
+      const parsed = parseReviewerOutput(summary)
+      return {
+        agentInstanceId,
+        branchName,
+        status,
+        ...(parsed.payload?.decision !== undefined ? { decision: parsed.payload.decision } : {}),
+        ...(parsed.payload?.feedback !== undefined ? { feedback: parsed.payload.feedback } : {}),
+        summary: parsed.freeFormSummary.slice(0, SUMMARY_MAX),
+        ...(error !== undefined ? { error } : {}),
+      }
+    }
+
     return {
       agentInstanceId,
       branchName,
@@ -52,7 +117,7 @@ export class DelegateToolHandler {
 
   private async resolveSpawnInputs(
     input: DelegateToolInput,
-  ): Promise<{ agentInstanceId: string; branchName: string; workspacePath: string }> {
+  ): Promise<{ agentInstanceId: string; branchName: string; workspacePath: string; edgeType: string }> {
     const parentRow = this.deps.agentInstanceStore.byId(this.deps.parentAgentInstanceId)
     const fromRoleNodeId = parentRow?.roleNodeId ?? 'director'
 
@@ -120,13 +185,14 @@ export class DelegateToolHandler {
       endedAt: null,
     })
 
-    return { agentInstanceId, branchName, workspacePath: ws.path }
+    return { agentInstanceId, branchName, workspacePath: ws.path, edgeType: target.edgeType }
   }
 
   private async runSpawnedAgent(
     agentInstanceId: string,
     input: DelegateToolInput,
     workspacePath: string,
+    outputSchema?: unknown,
   ): Promise<{ summary: string; status: 'completed' | 'failed'; error?: string }> {
     let summary = ''
     let status: 'completed' | 'failed' = 'completed'
@@ -137,6 +203,7 @@ export class DelegateToolHandler {
         workdir: workspacePath,
         role: input.role,
         initialPrompt: `${defaultSystemPromptFor(input.role)}\n\nTask: ${input.prompt}`,
+        ...(outputSchema !== undefined ? { outputSchema } : {}),
       })
       this.deps.agentInstanceStore.updateSessionId(agentInstanceId, handle.sessionId)
       this.deps.agentInstanceStore.updateStatus(agentInstanceId, 'running')

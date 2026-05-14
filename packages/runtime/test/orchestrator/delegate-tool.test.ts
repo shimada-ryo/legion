@@ -70,6 +70,33 @@ function createMockProvider(opts?: { summary?: string }) {
   }
 }
 
+// Mock: AgentProvider that captures the last LaunchRequest for outputSchema inspection
+// representing:    @legion/core AgentProvider interface (legion internal protocol)
+// verified on:     2026-05-14, by review of packages/core/src/types/agent-provider.ts
+// invalidated when: LaunchRequest interface changes (esp. outputSchema field removed or renamed)
+// contract test:   packages/runtime/test/integration/delegate-flow-review.integration.test.ts (Phase 3 a06)
+function createCapturingProvider(opts?: { summary?: string }) {
+  const summary = opts?.summary ?? 'edited foo.ts and committed'
+  const provider = {
+    lastLaunchRequest: undefined as unknown | undefined,
+    launch: async (req: unknown) => {
+      provider.lastLaunchRequest = req
+      return { sessionId: 'rev-sess-1' }
+    },
+    stream: async function* (_sid: string) {
+      yield {
+        id: 'evt-1',
+        sessionId: 'rev-sess-1',
+        type: 'message' as const,
+        payload: { text: summary },
+        timestamp: new Date(),
+      }
+    },
+    shutdown: async () => {},
+  }
+  return provider
+}
+
 function stubEventLog() {
   const events: AgentEvent[] = []
   return { write: (e: AgentEvent) => events.push(e) }
@@ -255,6 +282,137 @@ describe('DelegateToolHandler', () => {
     await expect(handler.handle({ role: 'reviewer', prompt: 'review please' })).rejects.toThrow(
       /no branchName/i,
     )
+
+    db.close()
+  })
+
+  test('passes outputSchema to provider.launch when delegating to reviewer', async () => {
+    const db = new Database(':memory:')
+    initInstanceSchema(db)
+    initAgentInstanceSchema(db)
+    const agentInstanceStore = new AgentInstanceStore(db)
+
+    const implId = ulid()
+    agentInstanceStore.insert({
+      id: implId,
+      workflowInstanceId: 'wf-1',
+      roleNodeId: 'implementer',
+      sessionId: 'sess-implementer',
+      parentAgentInstanceId: 'director-id',
+      spawnEdgeId: 'director→implementer',
+      status: 'running',
+      workspaceKind: 'owned',
+      workspacePath: '/tmp/wt1',
+      branchName: 'legion/wf-1/impl-1',
+      startedAt: new Date(),
+      endedAt: null,
+    })
+
+    const provider = createCapturingProvider()
+    const handler = new DelegateToolHandler({
+      workflowInstanceId: 'wf-1',
+      parentAgentInstanceId: implId,
+      agentInstanceStore,
+      workspaceProvider: createMockWorkspaceProvider(),
+      provider: provider as never,
+      eventLog: stubEventLog() as never,
+      template: templateWithReviewsEdge(),
+      baseCommitSha: 'base-sha',
+    })
+
+    await handler.handle({ role: 'reviewer', prompt: 'review please' })
+
+    expect(provider.lastLaunchRequest).toBeDefined()
+    expect((provider.lastLaunchRequest as any).outputSchema).toBeDefined()
+    expect((provider.lastLaunchRequest as any).outputSchema.required).toContain('decision')
+
+    db.close()
+  })
+
+  test('parses decision/feedback/notes from final assistant_message when role=reviewer', async () => {
+    const db = new Database(':memory:')
+    initInstanceSchema(db)
+    initAgentInstanceSchema(db)
+    const agentInstanceStore = new AgentInstanceStore(db)
+
+    const implId = ulid()
+    agentInstanceStore.insert({
+      id: implId,
+      workflowInstanceId: 'wf-1',
+      roleNodeId: 'implementer',
+      sessionId: 'sess-implementer',
+      parentAgentInstanceId: 'director-id',
+      spawnEdgeId: 'director→implementer',
+      status: 'running',
+      workspaceKind: 'owned',
+      workspacePath: '/tmp/wt1',
+      branchName: 'legion/wf-1/impl-1',
+      startedAt: new Date(),
+      endedAt: null,
+    })
+
+    const provider = createCapturingProvider({
+      summary: 'free-form notes\n\n```json\n{"decision":"request-changes","feedback":"fix the typo","notes":"some context"}\n```',
+    })
+    const handler = new DelegateToolHandler({
+      workflowInstanceId: 'wf-1',
+      parentAgentInstanceId: implId,
+      agentInstanceStore,
+      workspaceProvider: createMockWorkspaceProvider(),
+      provider: provider as never,
+      eventLog: stubEventLog() as never,
+      template: templateWithReviewsEdge(),
+      baseCommitSha: 'base-sha',
+    })
+
+    const out = await handler.handle({ role: 'reviewer', prompt: 'review please' })
+
+    expect(out.decision).toBe('request-changes')
+    expect(out.feedback).toBe('fix the typo')
+    expect(out.summary).not.toContain('```json')
+
+    db.close()
+  })
+
+  test('handles malformed JSON gracefully (decision=undefined, status=completed)', async () => {
+    const db = new Database(':memory:')
+    initInstanceSchema(db)
+    initAgentInstanceSchema(db)
+    const agentInstanceStore = new AgentInstanceStore(db)
+
+    const implId = ulid()
+    agentInstanceStore.insert({
+      id: implId,
+      workflowInstanceId: 'wf-1',
+      roleNodeId: 'implementer',
+      sessionId: 'sess-implementer',
+      parentAgentInstanceId: 'director-id',
+      spawnEdgeId: 'director→implementer',
+      status: 'running',
+      workspaceKind: 'owned',
+      workspacePath: '/tmp/wt1',
+      branchName: 'legion/wf-1/impl-1',
+      startedAt: new Date(),
+      endedAt: null,
+    })
+
+    const provider = createCapturingProvider({ summary: 'not even json' })
+    const handler = new DelegateToolHandler({
+      workflowInstanceId: 'wf-1',
+      parentAgentInstanceId: implId,
+      agentInstanceStore,
+      workspaceProvider: createMockWorkspaceProvider(),
+      provider: provider as never,
+      eventLog: stubEventLog() as never,
+      template: templateWithReviewsEdge(),
+      baseCommitSha: 'base-sha',
+    })
+
+    const out = await handler.handle({ role: 'reviewer', prompt: 'review please' })
+
+    expect(out.decision).toBeUndefined()
+    expect(out.status).toBe('completed')
+    expect(out.summary).toBe('not even json')
 
     db.close()
   })
