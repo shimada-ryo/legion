@@ -3,6 +3,7 @@
 
 import type { WorkflowTemplate } from './template'
 import type { Task } from './task'
+import type { WorkspaceRef } from './workspace'
 
 export type WorkflowInstanceStatus =
   | 'running'
@@ -52,6 +53,10 @@ export interface AgentInstance {
   workflowInstanceId: string
   sessionId: string
   status: AgentStatus
+  parentAgentInstanceId?: string      // Phase 2: parent (Director's id for Implementer)
+  spawnEdgeId?: string                // Phase 2: which template edge spawned this agent
+  workspace: WorkspaceRef             // Phase 2: persisted workspace reference
+  branchName?: string                 // Phase 2: branch name for committers (Implementer); undefined for --detach (Director)
   tasks: Task[]
   inbox: InboundMessage[]
   subscriptions: SubscriptionState[]
