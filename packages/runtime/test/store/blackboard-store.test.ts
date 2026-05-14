@@ -83,4 +83,50 @@ describe('BlackboardStore', () => {
     db.run('DELETE FROM workflow_instances WHERE id = ?', [wfId])
     expect(store.listByWorkflow(wfId)).toHaveLength(0)
   })
+
+  describe('tail (Phase 3 Pub/Sub)', () => {
+    it('notifies subscribed handlers on insert, scoped by workflowInstanceId', () => {
+      const wfA = ulid()
+      const wfB = ulid()
+      db.run('INSERT INTO workflow_instances (id) VALUES (?)', [wfA])
+      db.run('INSERT INTO workflow_instances (id) VALUES (?)', [wfB])
+
+      const seenA: string[] = []
+      const seenB: string[] = []
+      store.tail(wfA, (m) => seenA.push(m.topic))
+      store.tail(wfB, (m) => seenB.push(m.topic))
+
+      store.insert({ id: ulid(), workflowInstanceId: wfA, topic: 't1', publisherAgentId: null, payload: {}, publishedAt: 1 })
+      store.insert({ id: ulid(), workflowInstanceId: wfB, topic: 't2', publisherAgentId: null, payload: {}, publishedAt: 2 })
+      store.insert({ id: ulid(), workflowInstanceId: wfA, topic: 't3', publisherAgentId: null, payload: {}, publishedAt: 3 })
+
+      expect(seenA).toEqual(['t1', 't3'])
+      expect(seenB).toEqual(['t2'])
+    })
+
+    it('stop function unsubscribes the handler', () => {
+      const wfId = ulid()
+      db.run('INSERT INTO workflow_instances (id) VALUES (?)', [wfId])
+
+      const seen: string[] = []
+      const stop = store.tail(wfId, (m) => seen.push(m.topic))
+      store.insert({ id: ulid(), workflowInstanceId: wfId, topic: 't1', publisherAgentId: null, payload: {}, publishedAt: 1 })
+      stop()
+      store.insert({ id: ulid(), workflowInstanceId: wfId, topic: 't2', publisherAgentId: null, payload: {}, publishedAt: 2 })
+
+      expect(seen).toEqual(['t1'])
+    })
+
+    it('a handler that throws does not break subsequent handlers', () => {
+      const wfId = ulid()
+      db.run('INSERT INTO workflow_instances (id) VALUES (?)', [wfId])
+
+      const seen: string[] = []
+      store.tail(wfId, () => { throw new Error('boom') })
+      store.tail(wfId, (m) => seen.push(m.topic))
+
+      store.insert({ id: ulid(), workflowInstanceId: wfId, topic: 't1', publisherAgentId: null, payload: {}, publishedAt: 1 })
+      expect(seen).toEqual(['t1'])
+    })
+  })
 })

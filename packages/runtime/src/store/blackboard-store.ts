@@ -11,6 +11,8 @@ interface DbRow {
 }
 
 export class BlackboardStore {
+  private subscribers = new Map<string, Map<symbol, (m: BlackboardMessage) => void>>()
+
   constructor(private readonly db: Database) {}
 
   initSchema(): void {
@@ -42,6 +44,34 @@ export class BlackboardStore {
         msg.publishedAt,
       ],
     )
+    this.notify(msg)
+  }
+
+  /** Subscribe to inserts for a given workflow. Returns an unsubscribe fn. */
+  tail(
+    workflowInstanceId: string,
+    handler: (m: BlackboardMessage) => void,
+  ): () => void {
+    const key = Symbol()
+    let inner = this.subscribers.get(workflowInstanceId)
+    if (!inner) {
+      inner = new Map()
+      this.subscribers.set(workflowInstanceId, inner)
+    }
+    inner.set(key, handler)
+    return () => inner!.delete(key)
+  }
+
+  private notify(msg: BlackboardMessage): void {
+    const inner = this.subscribers.get(msg.workflowInstanceId)
+    if (!inner) return
+    for (const h of inner.values()) {
+      try {
+        h(msg)
+      } catch {
+        // Subscriber failures must not break the publish pipeline.
+      }
+    }
   }
 
   listByWorkflow(
