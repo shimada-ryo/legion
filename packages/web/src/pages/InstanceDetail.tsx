@@ -37,6 +37,7 @@ export default function InstanceDetail() {
           selectedNodeId={selectedNodeId}
           template={data.templateSnapshot}
           events={events}
+          agentInstances={data.agentInstances}
         />
       </div>
       <div className="event-log" style={eventLogStyle}>
