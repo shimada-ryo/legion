@@ -12,6 +12,7 @@ import {
   initAgentInstanceSchema,
 } from '@legion/runtime/store/agent-instance-store'
 import { EventLog } from '@legion/runtime/eventlog/eventlog'
+import { initEventLogSchema } from '@legion/runtime/eventlog/schema'
 import { LocalWorktreeProvider } from '@legion/runtime/workspace/local-worktree-provider'
 import { ClaudeCodeAgentSDKProvider } from '@legion/runtime/adapter/provider'
 import { triggerWorkflow } from '@legion/runtime/orchestrator/trigger'
@@ -46,6 +47,7 @@ describe.skipIf(!HAS_AUTH)('Phase 2 delegate flow (real SDK)', () => {
         const db = new Database(':memory:')
         initInstanceSchema(db)
         initAgentInstanceSchema(db)
+        initEventLogSchema(db)
 
         const store = new InstanceStore(db)
         const agentStore = new AgentInstanceStore(db)
