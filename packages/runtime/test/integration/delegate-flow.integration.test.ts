@@ -11,6 +11,7 @@ import {
   AgentInstanceStore,
   initAgentInstanceSchema,
 } from '@legion/runtime/store/agent-instance-store'
+import { BlackboardStore } from '@legion/runtime/store/blackboard-store'
 import { EventLog } from '@legion/runtime/eventlog/eventlog'
 import { initEventLogSchema } from '@legion/runtime/eventlog/schema'
 import { LocalWorktreeProvider } from '@legion/runtime/workspace/local-worktree-provider'
@@ -52,6 +53,8 @@ describe.skipIf(!HAS_AUTH)('Phase 2 delegate flow (real SDK)', () => {
         const store = new InstanceStore(db)
         const agentStore = new AgentInstanceStore(db)
         const log = new EventLog(db)
+        const blackboard = new BlackboardStore(db)
+        blackboard.initSchema()
         const worktree = new LocalWorktreeProvider({
           repoPath: repo.path,
           baseDir: `${repo.path}/.legion-worktrees`,
@@ -71,6 +74,7 @@ describe.skipIf(!HAS_AUTH)('Phase 2 delegate flow (real SDK)', () => {
           instanceStore: store,
           agentInstanceStore: agentStore,
           eventLog: log,
+          blackboardStore: blackboard,
         })
 
         const finalStatus = await awaitWorkflow(store, workflowInstanceId, 170_000)

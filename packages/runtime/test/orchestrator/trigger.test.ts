@@ -16,6 +16,7 @@ import {
   AgentInstanceStore,
   initAgentInstanceSchema,
 } from '@legion/runtime/store/agent-instance-store'
+import { BlackboardStore } from '@legion/runtime/store/blackboard-store'
 import { triggerWorkflow } from '@legion/runtime/orchestrator/trigger'
 import type { WorkflowTemplate } from '@legion/core'
 
@@ -54,6 +55,7 @@ const DIRECTOR_TEMPLATE: WorkflowTemplate = {
 let repo: TempRepo
 let baseDir: string
 let db: Database
+let blackboard: BlackboardStore
 
 beforeEach(async () => {
   repo = await makeTempRepo()
@@ -62,6 +64,8 @@ beforeEach(async () => {
   initEventLogSchema(db)
   initInstanceSchema(db)
   initAgentInstanceSchema(db)
+  blackboard = new BlackboardStore(db)
+  blackboard.initSchema()
 })
 
 afterEach(async () => {
@@ -98,6 +102,7 @@ describe('triggerWorkflow', () => {
       instanceStore: store,
       agentInstanceStore,
       eventLog: log,
+      blackboardStore: blackboard,
     })
     expect(result.workflowInstanceId).toBeDefined()
     expect(result.sessionId).toBeDefined()
@@ -138,6 +143,7 @@ describe('triggerWorkflow', () => {
       instanceStore: store,
       agentInstanceStore,
       eventLog: log,
+      blackboardStore: blackboard,
     })
     await new Promise((r) => setTimeout(r, 50))
     // The worktree path is the per-instance directory; marker should be there
@@ -168,6 +174,7 @@ describe('triggerWorkflow', () => {
       instanceStore: store,
       agentInstanceStore,
       eventLog: log,
+      blackboardStore: blackboard,
     })
     // Wait for the streaming consumer to drain
     await new Promise((r) => setTimeout(r, 50))

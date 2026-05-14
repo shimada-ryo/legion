@@ -9,6 +9,7 @@ import {
   AgentInstanceStore,
   initAgentInstanceSchema,
 } from '@legion/runtime/store/agent-instance-store'
+import { BlackboardStore } from '@legion/runtime/store/blackboard-store'
 import { EventLog } from '@legion/runtime/eventlog/eventlog'
 import { LocalWorktreeProvider } from '@legion/runtime/workspace/local-worktree-provider'
 import { runOrphanRecovery } from './boot/orphan-recovery'
@@ -28,6 +29,7 @@ export interface AppRuntime {
   options: AppOptions
   store: InstanceStore
   agentInstanceStore: AgentInstanceStore
+  blackboardStore: BlackboardStore
   log: EventLog
   worktree: LocalWorktreeProvider
   /** workflowInstanceId → provider (one provider instance per workflow; sessions live in agentInstanceStore). */
@@ -44,11 +46,14 @@ export interface AppHandle {
 
 export async function startApp(opts: AppOptions): Promise<AppHandle> {
   initAgentInstanceSchema(opts.db)
+  const blackboardStore = new BlackboardStore(opts.db)
+  blackboardStore.initSchema()
   runOrphanRecovery({ db: opts.db })
   const runtime: AppRuntime = {
     options: opts,
     store: new InstanceStore(opts.db),
     agentInstanceStore: new AgentInstanceStore(opts.db),
+    blackboardStore,
     log: new EventLog(opts.db),
     worktree: new LocalWorktreeProvider({
       repoPath: opts.repoPath,

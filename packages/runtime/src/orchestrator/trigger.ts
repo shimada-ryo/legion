@@ -12,6 +12,7 @@ import { resolveTriggerTargets } from './graph-walker'
 import { DelegateToolHandler } from './delegate-tool'
 import { loadLegionConfig } from '../config/loader'
 import { runWorktreeSetup } from '../config/setup-runner'
+import type { BlackboardStore } from '../store/blackboard-store'
 
 export interface TriggerInput {
   template: WorkflowTemplate
@@ -23,6 +24,7 @@ export interface TriggerInput {
   instanceStore: InstanceStore
   agentInstanceStore: AgentInstanceStore
   eventLog: EventLog
+  blackboardStore: BlackboardStore
 }
 
 export interface TriggerResult {
@@ -89,6 +91,7 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
     eventLog: { write: (evt) => input.eventLog.append(instance.id, evt) },
     template: input.template,
     baseCommitSha,
+    blackboardStore: input.blackboardStore,
   })
   const delegateTool = tool(
     'delegate',

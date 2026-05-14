@@ -13,6 +13,7 @@ import { defaultSystemPromptFor } from '../adapter/role-prompts'
 import { resolveDelegateTargets } from './graph-walker'
 import { PENDING_SESSION_ID, type AgentInstanceStore } from '../store/agent-instance-store'
 import type { WorkspaceProvider } from '../workspace/provider'
+import type { BlackboardStore } from '../store/blackboard-store'
 
 const REVIEW_OUTPUT_SCHEMA = {
   type: 'object',
@@ -75,9 +76,11 @@ export interface DelegateToolDeps {
   eventLog: EventLogWriter
   template: WorkflowTemplate
   baseCommitSha: string
+  blackboardStore: BlackboardStore
 }
 
 const SUMMARY_MAX = 500
+const PROMPT_PREVIEW_MAX = 200
 
 export class DelegateToolHandler {
   constructor(private readonly deps: DelegateToolDeps) {}
@@ -85,6 +88,15 @@ export class DelegateToolHandler {
   async handle(input: DelegateToolInput): Promise<DelegateToolOutput> {
     const { agentInstanceId, branchName, workspacePath, edgeType } =
       await this.resolveSpawnInputs(input)
+
+    this.publishSystemEvent('system.delegate.start', {
+      fromAgentInstanceId: this.deps.parentAgentInstanceId,
+      toAgentInstanceId: agentInstanceId,
+      role: input.role,
+      edgeType,
+      prompt: input.prompt.slice(0, PROMPT_PREVIEW_MAX),
+    })
+
     const outputSchema = edgeType === 'reviews' ? REVIEW_OUTPUT_SCHEMA : undefined
     const { summary, status, error } = await this.runSpawnedAgent(
       agentInstanceId,
@@ -93,8 +105,22 @@ export class DelegateToolHandler {
       outputSchema,
     )
 
+    this.publishSystemEvent('system.delegate.result', {
+      agentInstanceId,
+      role: input.role,
+      status,
+      summary: summary.slice(0, PROMPT_PREVIEW_MAX),
+    })
+
     if (edgeType === 'reviews') {
       const parsed = parseReviewerOutput(summary)
+      if (parsed.payload !== undefined) {
+        this.publishSystemEvent('system.review.decision', {
+          agentInstanceId,
+          decision: parsed.payload.decision,
+          feedback: parsed.payload.feedback,
+        })
+      }
       return {
         agentInstanceId,
         branchName,
@@ -113,6 +139,17 @@ export class DelegateToolHandler {
       summary: summary.slice(0, SUMMARY_MAX),
       ...(error !== undefined ? { error } : {}),
     }
+  }
+
+  private publishSystemEvent(topic: string, payload: unknown): void {
+    this.deps.blackboardStore.insert({
+      id: ulid(),
+      workflowInstanceId: this.deps.workflowInstanceId,
+      topic,
+      publisherAgentId: null,
+      payload,
+      publishedAt: Date.now(),
+    })
   }
 
   private async resolveSpawnInputs(

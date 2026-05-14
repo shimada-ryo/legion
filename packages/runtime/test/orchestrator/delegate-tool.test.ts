@@ -7,6 +7,7 @@ import {
 } from '@legion/runtime/store/agent-instance-store'
 import { initInstanceSchema } from '@legion/runtime/orchestrator/instance-store'
 import { DelegateToolHandler } from '@legion/runtime/orchestrator/delegate-tool'
+import { BlackboardStore } from '@legion/runtime/store/blackboard-store'
 import type { AgentEvent, WorkflowTemplate } from '@legion/core'
 import type {
   WorkspaceCreateInput,
@@ -102,6 +103,13 @@ function stubEventLog() {
   return { write: (e: AgentEvent) => events.push(e) }
 }
 
+/** Create and init a BlackboardStore backed by an existing in-memory db. */
+function makeBlackboard(db: InstanceType<typeof Database>): BlackboardStore {
+  const store = new BlackboardStore(db)
+  store.initSchema()
+  return store
+}
+
 function makeMocks() {
   const db = new Database(':memory:')
   initInstanceSchema(db)
@@ -130,7 +138,10 @@ function makeMocks() {
   const workspaceProvider = createMockWorkspaceProvider()
   const provider = createMockProvider()
 
-  return { db, store, eventLog, workspaceProvider, provider, events }
+  const blackboard = new BlackboardStore(db)
+  blackboard.initSchema()
+
+  return { db, store, eventLog, workspaceProvider, provider, events, blackboard }
 }
 
 function makeHandler(m: ReturnType<typeof makeMocks>) {
@@ -143,6 +154,7 @@ function makeHandler(m: ReturnType<typeof makeMocks>) {
     eventLog: m.eventLog as never,
     template: TEMPLATE,
     baseCommitSha: 'abc',
+    blackboardStore: m.blackboard,
   })
 }
 
@@ -232,6 +244,7 @@ describe('DelegateToolHandler', () => {
       eventLog: stubEventLog() as never,
       template: templateWithReviewsEdge(),
       baseCommitSha: 'base-sha',
+      blackboardStore: makeBlackboard(db),
     })
 
     await handler.handle({ role: 'reviewer', prompt: 'review please' })
@@ -277,6 +290,7 @@ describe('DelegateToolHandler', () => {
       eventLog: stubEventLog() as never,
       template: templateWithReviewsEdge(),
       baseCommitSha: 'base-sha',
+      blackboardStore: makeBlackboard(db),
     })
 
     await expect(handler.handle({ role: 'reviewer', prompt: 'review please' })).rejects.toThrow(
@@ -318,6 +332,7 @@ describe('DelegateToolHandler', () => {
       eventLog: stubEventLog() as never,
       template: templateWithReviewsEdge(),
       baseCommitSha: 'base-sha',
+      blackboardStore: makeBlackboard(db),
     })
 
     await handler.handle({ role: 'reviewer', prompt: 'review please' })
@@ -363,6 +378,7 @@ describe('DelegateToolHandler', () => {
       eventLog: stubEventLog() as never,
       template: templateWithReviewsEdge(),
       baseCommitSha: 'base-sha',
+      blackboardStore: makeBlackboard(db),
     })
 
     const out = await handler.handle({ role: 'reviewer', prompt: 'review please' })
@@ -406,6 +422,7 @@ describe('DelegateToolHandler', () => {
       eventLog: stubEventLog() as never,
       template: templateWithReviewsEdge(),
       baseCommitSha: 'base-sha',
+      blackboardStore: makeBlackboard(db),
     })
 
     const out = await handler.handle({ role: 'reviewer', prompt: 'review please' })
@@ -415,5 +432,70 @@ describe('DelegateToolHandler', () => {
     expect(out.summary).toBe('not even json')
 
     db.close()
+  })
+
+  test('auto-publishes system.delegate.start/result plus review.decision for reviewer', async () => {
+    const db = new Database(':memory:')
+    initInstanceSchema(db)
+    initAgentInstanceSchema(db)
+    const agentInstanceStore = new AgentInstanceStore(db)
+    const blackboard = makeBlackboard(db)
+
+    const implId = ulid()
+    agentInstanceStore.insert({
+      id: implId,
+      workflowInstanceId: 'wf-1',
+      roleNodeId: 'implementer',
+      sessionId: 'sess-implementer',
+      parentAgentInstanceId: 'director-id',
+      spawnEdgeId: 'director→implementer',
+      status: 'running',
+      workspaceKind: 'owned',
+      workspacePath: '/tmp/wt1',
+      branchName: 'legion/wf-1/impl-1',
+      startedAt: new Date(),
+      endedAt: null,
+    })
+
+    const provider = createCapturingProvider({
+      summary: '{"decision":"approve","feedback":"","notes":""}',
+    })
+    const handler = new DelegateToolHandler({
+      workflowInstanceId: 'wf-1',
+      parentAgentInstanceId: implId,
+      agentInstanceStore,
+      workspaceProvider: createMockWorkspaceProvider(),
+      provider: provider as never,
+      eventLog: stubEventLog() as never,
+      template: templateWithReviewsEdge(),
+      baseCommitSha: 'base-sha',
+      blackboardStore: blackboard,
+    })
+
+    await handler.handle({ role: 'reviewer', prompt: 'review please' })
+
+    const msgs = blackboard.listByWorkflow('wf-1')
+    const topics = msgs.map((m) => m.topic)
+    expect(topics).toContain('system.delegate.start')
+    expect(topics).toContain('system.delegate.result')
+    expect(topics).toContain('system.review.decision')
+
+    const decisionMsg = msgs.find((m) => m.topic === 'system.review.decision')
+    expect((decisionMsg!.payload as any).decision).toBe('approve')
+
+    db.close()
+  })
+
+  test('auto-publishes only delegate.start/result (no review.decision) for implementer', async () => {
+    const m = makeMocks()
+    await makeHandler(m).handle({ role: 'implementer', prompt: 'build feature' })
+
+    const msgs = m.blackboard.listByWorkflow('wf-01')
+    const topics = msgs.map((msg) => msg.topic)
+    expect(topics).toContain('system.delegate.start')
+    expect(topics).toContain('system.delegate.result')
+    expect(topics).not.toContain('system.review.decision')
+
+    m.db.close()
   })
 })

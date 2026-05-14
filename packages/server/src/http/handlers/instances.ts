@@ -27,6 +27,7 @@ export async function handleWorkflowsTrigger(
     instanceStore: ctx.store,
     agentInstanceStore: ctx.agentInstanceStore,
     eventLog: ctx.log,
+    blackboardStore: ctx.blackboardStore,
   })
   ctx.adapters.set(workflowInstanceId, adapter)
   return Response.json({ workflowInstanceId }, { status: 202 })
