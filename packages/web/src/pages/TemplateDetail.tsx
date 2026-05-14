@@ -16,18 +16,18 @@ export default function TemplateDetail() {
       .catch((e) => setError((e as Error).message))
   }, [id])
 
-  if (error) return <div style={{ padding: 16, color: '#c22' }}>Error: {error}</div>
+  if (error) return <div style={{ padding: 16, color: 'var(--status-error)' }}>Error: {error}</div>
   if (!template) return <div style={{ padding: 16 }}>Loading…</div>
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ padding: 12, borderBottom: '1px solid #ddd', background: '#fafafa' }}>
+      <div style={{ padding: 12, borderBottom: '1px solid var(--border-default)', background: 'var(--bg-surface)' }}>
         <Link to="/templates" style={{ marginRight: 12 }}>
           ← Templates
         </Link>
         <strong>{template.name}</strong>
-        <span style={{ color: '#666', marginLeft: 8 }}>({template.id})</span>
-        <span style={{ marginLeft: 16, fontSize: 12, color: '#888' }}>
+        <span style={{ color: 'var(--fg-muted)', marginLeft: 8 }}>({template.id})</span>
+        <span style={{ marginLeft: 16, fontSize: 12, color: 'var(--fg-subtle)' }}>
           (read-only mockup — Phase 1 では編集不可)
         </span>
       </div>
