@@ -57,8 +57,9 @@ export async function startApp(opts: AppOptions): Promise<AppHandle> {
   }
   runtime.log.onAny((evt) => {
     if (evt.type === 'permission_request') {
-      const approvalId = (evt.payload as { approvalId?: string }).approvalId
-      if (approvalId) runtime.approvalIdToSessionId.set(approvalId, evt.sessionId)
+      const approvalId = (evt.payload as { approvalId?: unknown }).approvalId
+      if (typeof approvalId === 'string' && approvalId)
+        runtime.approvalIdToSessionId.set(approvalId, evt.sessionId)
     }
   })
   const server: BunServer = Bun.serve<WsData>({

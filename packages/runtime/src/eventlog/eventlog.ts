@@ -20,7 +20,13 @@ export class EventLog {
   append(workflowInstanceId: string, evt: AgentEvent): number {
     const seq = this.writer.append(workflowInstanceId, evt)
     this.reader.notify(workflowInstanceId, evt, seq)
-    for (const tap of this.taps) tap(evt)
+    for (const tap of this.taps) {
+      try {
+        tap(evt)
+      } catch {
+        // Tap failures must not break the event pipeline.
+      }
+    }
     return seq
   }
 
