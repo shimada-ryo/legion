@@ -20,10 +20,12 @@ export function debugEnabled(): boolean {
 export function debugLog(tag: string, payload: Record<string, unknown> = {}): void {
   if (!ENABLED) return
   const ts = new Date().toISOString()
-  // Truncate any long string fields for readability.
+  // Truncate any long string fields for readability. Error fields are kept
+  // longer because they often carry the diagnostic detail we care about.
   const safe: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(payload)) {
-    safe[k] = typeof v === 'string' && v.length > 200 ? `${v.slice(0, 200)}…` : v
+    const limit = k === 'error' ? 600 : 200
+    safe[k] = typeof v === 'string' && v.length > limit ? `${v.slice(0, limit)}…` : v
   }
   // eslint-disable-next-line no-console
   console.error(`[${ts}] [legion:${tag}]`, JSON.stringify(safe))

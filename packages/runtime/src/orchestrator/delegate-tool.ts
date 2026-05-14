@@ -16,18 +16,20 @@ import type { WorkspaceProvider } from '../workspace/provider'
 import type { BlackboardStore } from '../store/blackboard-store'
 import { debugLog } from '../util/logger'
 
-// OpenAI's response_format JSON Schema requires `additionalProperties: false`
-// (verified via contract test against real Codex SDK / OpenAI API, 2026-05-15).
-// Omitting it surfaces as `invalid_json_schema` from the API.
+// OpenAI's strict response_format JSON Schema requires:
+//   - `additionalProperties: false`
+//   - every key listed in `required` (nullable types model "optional")
+// Omitting either surfaces as `invalid_json_schema` from the API.
+// Both rules verified against the real Codex SDK / OpenAI API on 2026-05-15.
 const REVIEW_OUTPUT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   properties: {
     decision: { type: 'string', enum: ['approve', 'request-changes', 'reject'] },
-    feedback: { type: 'string' },
-    notes:    { type: 'string' },
+    feedback: { type: ['string', 'null'] },
+    notes:    { type: ['string', 'null'] },
   },
-  required: ['decision'],
+  required: ['decision', 'feedback', 'notes'],
 } as const
 
 interface ReviewPayload {
@@ -178,7 +180,7 @@ export class DelegateToolHandler {
         branchName,
         status,
         ...(parsed.payload?.decision !== undefined ? { decision: parsed.payload.decision } : {}),
-        ...(parsed.payload?.feedback !== undefined ? { feedback: parsed.payload.feedback } : {}),
+        ...(typeof parsed.payload?.feedback === 'string' ? { feedback: parsed.payload.feedback } : {}),
         summary: parsed.freeFormSummary.slice(0, SUMMARY_MAX),
         ...(error !== undefined ? { error } : {}),
       }
