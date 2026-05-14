@@ -45,4 +45,60 @@ describe('loadWorkflowTemplate', () => {
     const result = validateTemplate(t, new Set(['claude-code', 'codex']))
     expect(result.errors).toEqual([])
   })
+
+  test('parses position field on nodes', async () => {
+    const tmp = join(tmpdir(), 'with-position.yaml')
+    await Bun.write(
+      tmp,
+      `id: t
+name: T
+nodes:
+  - id: a
+    type: trigger
+    kind: manual
+    position: { x: 100, y: 200 }
+  - id: b
+    type: trigger
+    kind: manual
+edges: []
+`,
+    )
+    const t = await loadWorkflowTemplate(tmp)
+    expect(t.nodes[0]!.position).toEqual({ x: 100, y: 200 })
+    expect(t.nodes[1]!.position).toBeUndefined()
+  })
+
+  test('throws when position.x is not a number', async () => {
+    const tmp = join(tmpdir(), 'bad-position-type.yaml')
+    await Bun.write(
+      tmp,
+      `id: t
+name: T
+nodes:
+  - id: a
+    type: trigger
+    kind: manual
+    position: { x: "1", y: 2 }
+edges: []
+`,
+    )
+    await expect(loadWorkflowTemplate(tmp)).rejects.toThrow(/numeric x and y/)
+  })
+
+  test('throws when position.x is not finite', async () => {
+    const tmp = join(tmpdir(), 'bad-position-nan.yaml')
+    await Bun.write(
+      tmp,
+      `id: t
+name: T
+nodes:
+  - id: a
+    type: trigger
+    kind: manual
+    position: { x: .nan, y: 0 }
+edges: []
+`,
+    )
+    await expect(loadWorkflowTemplate(tmp)).rejects.toThrow(/finite numbers/)
+  })
 })

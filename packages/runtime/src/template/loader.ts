@@ -5,6 +5,7 @@ import type {
   TemplateNode,
   TemplateEdge,
   EdgeType,
+  NodePosition,
 } from '@legion/core'
 
 const KNOWN_NODE_TYPES = new Set([
@@ -60,7 +61,24 @@ function parseNode(raw: unknown, file: string, idx: number): TemplateNode {
   if (!KNOWN_NODE_TYPES.has(n['type'])) {
     throw new Error(`${file}: nodes[${idx}] unknown type '${n['type']}'`)
   }
-  return n as unknown as TemplateNode
+  const position = parsePosition(n['position'], file, idx)
+  const out = position ? { ...n, position } : n
+  return out as unknown as TemplateNode
+}
+
+function parsePosition(raw: unknown, file: string, idx: number): NodePosition | undefined {
+  if (raw === undefined) return undefined
+  if (typeof raw !== 'object' || raw === null) {
+    throw new Error(`${file}: nodes[${idx}].position must be an object`)
+  }
+  const p = raw as Record<string, unknown>
+  if (typeof p['x'] !== 'number' || typeof p['y'] !== 'number') {
+    throw new Error(`${file}: nodes[${idx}].position requires numeric x and y`)
+  }
+  if (!Number.isFinite(p['x']) || !Number.isFinite(p['y'])) {
+    throw new Error(`${file}: nodes[${idx}].position must be finite numbers`)
+  }
+  return { x: p['x'], y: p['y'] }
 }
 
 function parseEdges(raw: unknown, file: string): TemplateEdge[] {
