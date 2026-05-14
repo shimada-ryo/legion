@@ -183,6 +183,7 @@ describe('GET /api/instances and /api/instances/:id', () => {
     }
     expect(Array.isArray(detail.agentInstances)).toBe(true)
     expect(detail.agentInstances.length).toBeGreaterThanOrEqual(2)
+    expect(detail.agentInstances.some((a) => a.roleNodeId === 'director')).toBe(true)
     const impl = detail.agentInstances.find((a) => a.id === 'impl-1')
     expect(impl).toBeDefined()
     expect(impl!.parentAgentInstanceId).toBe('dir-synth')

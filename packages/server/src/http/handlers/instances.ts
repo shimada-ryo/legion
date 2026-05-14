@@ -47,8 +47,7 @@ export function handleInstanceDetail(id: string, ctx: AppRuntime): Response {
   const inst = ctx.store.get(id)
   if (!inst) return new Response('Not Found', { status: 404 })
   const events = ctx.log.history(id)
-  const rows = ctx.agentInstanceStore.listByWorkflow(id)
-  const agentInstances = rows.map((r) => ({
+  const agentInstances = ctx.agentInstanceStore.listByWorkflow(id).map((r) => ({
     id: r.id,
     roleNodeId: r.roleNodeId,
     workflowInstanceId: r.workflowInstanceId,
@@ -56,7 +55,7 @@ export function handleInstanceDetail(id: string, ctx: AppRuntime): Response {
     status: r.status,
     parentAgentInstanceId: r.parentAgentInstanceId ?? undefined,
     spawnEdgeId: r.spawnEdgeId ?? undefined,
-    workspace: { kind: r.workspaceKind, path: r.workspacePath } as const,
+    workspace: { kind: r.workspaceKind, path: r.workspacePath },
     branchName: r.branchName ?? undefined,
     tasks: [],
     inbox: [],
