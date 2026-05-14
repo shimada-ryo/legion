@@ -101,8 +101,9 @@ function FilterChip({
         marginRight: 6,
         padding: '2px 8px',
         fontSize: 11,
-        background: active ? '#eef' : 'transparent',
-        border: '1px solid #ccc',
+        background: active ? 'var(--bg-elevated)' : 'transparent',
+        color: 'var(--fg-primary)',
+        border: '1px solid var(--border-default)',
         borderRadius: 12,
         cursor: 'pointer',
       }}
@@ -116,9 +117,9 @@ function formatTime(ms: number): string {
   return new Date(ms).toISOString().slice(11, 19)
 }
 
-const emptyStyle: CSSProperties = { padding: 12, color: '#888', fontSize: 13 }
-const filterRowStyle: CSSProperties = { paddingBottom: 6, borderBottom: '1px solid #eee', marginBottom: 6 }
-const rowStyle: CSSProperties = { borderBottom: '1px solid #f0f0f0' }
+const emptyStyle: CSSProperties = { padding: 12, color: 'var(--fg-muted)', fontSize: 13 }
+const filterRowStyle: CSSProperties = { paddingBottom: 6, borderBottom: '1px solid var(--border-default)', marginBottom: 6 }
+const rowStyle: CSSProperties = { borderBottom: '1px solid var(--border-default)' }
 const rowButtonStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -127,19 +128,21 @@ const rowButtonStyle: CSSProperties = {
   padding: '4px 0',
   border: 'none',
   background: 'transparent',
+  color: 'var(--fg-primary)',
   textAlign: 'left',
   cursor: 'pointer',
-  fontFamily: 'ui-monospace, monospace',
+  fontFamily: 'var(--font-mono)',
   fontSize: 12,
 }
-const timeStyle: CSSProperties = { color: '#888', minWidth: 64 }
-const topicStyle: CSSProperties = { color: '#0066cc' }
-const publisherStyle: CSSProperties = { color: '#888', fontStyle: 'italic' }
+const timeStyle: CSSProperties = { color: 'var(--fg-muted)', minWidth: 64 }
+const topicStyle: CSSProperties = { color: 'var(--accent)' }
+const publisherStyle: CSSProperties = { color: 'var(--fg-muted)', fontStyle: 'italic' }
 const payloadStyle: CSSProperties = {
   margin: '4px 0 6px 64px',
   padding: '4px 6px',
-  background: '#fafafa',
-  border: '1px solid #eee',
+  background: 'var(--bg-canvas)',
+  border: '1px solid var(--border-default)',
+  color: 'var(--fg-primary)',
   fontSize: 11,
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-all',

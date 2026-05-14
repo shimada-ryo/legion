@@ -80,7 +80,7 @@ export default function EventLogPane({
             {stringifyPayload(row.e)}
           </div>
         ) : (
-          <div key={`bb-${row.m.id}`} style={{ color: '#8800aa' }}>
+          <div key={`bb-${row.m.id}`} style={{ color: 'var(--accent)' }}>
             [{new Date(row.m.publishedAt).toLocaleTimeString()}] [bb] {row.m.topic}{' '}
             {JSON.stringify(row.m.payload).slice(0, 80)}
           </div>
