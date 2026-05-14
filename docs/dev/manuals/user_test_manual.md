@@ -221,3 +221,46 @@ retry 発生時の UI 上の見え方:
 - Phase 2 narrow scope design: [docs/dev/specs/2026-05-14_phase2_design.md](../specs/2026-05-14_phase2_design.md)
 - Phase 3 design: [docs/dev/specs/2026-05-14_phase3_design.md](../specs/2026-05-14_phase3_design.md)
 - 直近の handoff: [docs/dev/handoff/2026-05-15.md](../handoff/2026-05-15.md)
+
+## Web UI: テーマ切替
+
+### 初回アクセスの追従
+
+1. OS の外観設定を Light にする
+2. ブラウザのプライベートウィンドウで `http://localhost:5173/` を開く
+3. **期待**: Light テーマで表示される（背景が淡 indigo、文字が濃紺）
+4. プライベートウィンドウを閉じる
+5. OS の外観設定を Dark にする
+6. 再度プライベートウィンドウで開く
+7. **期待**: Dark テーマで表示される（背景が濃紺、文字が淡 indigo）
+
+### TopNav トグル
+
+1. ブラウザで `/templates` などを開く
+2. TopNav 右端の ☀/☾ アイコンをクリック
+3. **期待**: 即座にテーマが切替わる。リロードしても維持される
+4. もう一度クリックして元に戻ることを確認
+
+### Settings の Appearance
+
+1. `/settings` を開く
+2. "Appearance" セクションに Light / Dark / System に追従 のラジオが見える
+3. Light → Dark → System を順にクリック
+4. **期待**: 各クリックで即座にテーマが反映、localStorage に保存される
+5. System に追従 を選んだ状態で OS の Light/Dark を切替える
+6. **期待**: 5 秒以内に web の表示も追従する
+
+### FOUC（チラつき）の確認
+
+1. localStorage に `legion.web.theme = 'dark'` をセット（DevTools の Application タブで）
+2. ページをリロード（Ctrl+R）
+3. **期待**: 一瞬たりとも白背景が見えず、ダーク背景で描画される
+
+### React Flow キャンバス
+
+1. `/templates/:id` を開く（既存テンプレートを表示）
+2. テーマを Light に切替
+3. **期待**: ノード白背景、枠線がタイプ別の色、背景に淡 indigo のドット
+4. テーマを Dark に切替
+5. **期待**: ノード濃紺背景、枠線・エッジは同じ色味、背景ドットが濃 indigo
+6. Controls（左下のズーム）の色がテーマに追従していることを確認
