@@ -151,8 +151,73 @@ bun "$env:TEMP\inspect-agents.ts" "$env:USERPROFILE\.legion\legion.db"
 
 `parent_agent_instance_id` が NULL のままなら Implementer は spawn されていません。`packages/runtime/src/adapter/provider/launch.ts` の `mcpServers` 配線を確認してください。
 
+## Phase 3 動作確認（Reviewer + Codex）
+
+Phase 3 narrow scope では Reviewer ロール（Codex provider）と Blackboard、Reviewer の retry loop（最大 3 回）を追加しました。下記は Phase 2 narrow の動作確認に加えて Phase 3 特有の挙動を観察する手順です。
+
+### 追加の前提
+
+- Phase 2 の前提（bun、Claude OAuth、`.env`、scratch repo）は同じ
+- **Codex CLI 認証**: `codex login` を実行して `~/.codex/auth.json` を作成しておく
+  - もしくは `$env:CODEX_API_KEY` をセット（OpenAI API キー直接）
+  - **`OPENAI_API_KEY` は legion から絶対にセットしないでください**（ChatGPT OAuth と衝突する footgun: openai/codex#3286）
+- `workflows/feature-with-review.yaml` がリポに含まれていること（Phase 3 で追加済み）
+
+### Trigger（Phase 3 workflow）
+
+ターミナル C で `templateId` を `feature-with-review` に切り替えます。
+
+```powershell
+$body = @{
+  templateId = 'feature-with-review'
+  userPrompt = 'Add a welcomeUser(name) function to src/hello.ts that returns "Welcome, <name>!" and commit with message "Add welcomeUser".'
+  baseRef    = 'HEAD'
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri http://localhost:5500/api/workflows/trigger -Method Post `
+  -ContentType 'application/json' -Body $body
+```
+
+### UI 観察チェックリスト（Phase 3）
+
+Phase 2 の 4 領域に加え、サイドバーが **5 タブ**（Overview / Events / Blackboard / Diff / Tasks）に増えています。
+
+| 観察対象 | 想定挙動 |
+| --- | --- |
+| Canvas | director / implementer / reviewer の 3 role node が順に色付け（running → completed） |
+| EventLog のフィルタチップ | `director-1`, `implementer-1`, `reviewer-1` が現れる。retry の場合は `reviewer-2` も |
+| EventLog の `blackboard` トグル | クリックで `[bb] system.delegate.start` 等の行が events と時系列で混在 |
+| Overview タブ（reviewer 選択時） | エージェント詳細の下に `Decision: approve`（または `request-changes` / `reject`）が表示 |
+| Overview タブ（implementer 選択時） | `Spawned` リストに `reviewer-1`（retry なら `reviewer-2` も）が並ぶ |
+| Blackboard タブ | `system.delegate.start` / `system.review.decision` 等の topic 行が時系列に。クリックで payload JSON が expand。`system.*` / `user` の filter chip が機能 |
+| Diff タブ | implementer のコミット差分が表示（reviewer は detached HEAD なので diff には現れない） |
+
+### retry の確認
+
+Reviewer が `request-changes` を返すように仕向けるには userPrompt に「最初は意図的に壊した実装でコミットして、Reviewer の指摘を受けたら修正して」と書きます。例:
+
+```text
+Add a divide(a, b) function to src/math.ts. IMPORTANT: in your first commit
+omit the divide-by-zero check; commit just `return a / b`. The Reviewer will
+catch this; when it does, add the guard and re-commit.
+```
+
+retry 発生時の UI 上の見え方:
+
+- Overview の implementer 詳細の `Spawned` に `reviewer-1`, `reviewer-2` の 2 行
+- Blackboard タブで `system.review.decision` topic が 2 件並ぶ（最初の payload に `request-changes`、最後に `approve`）
+- EventLog の reviewer フィルタチップが 2 つ（`reviewer-1`, `reviewer-2`）
+
+### Phase 3 トラブルシュート
+
+- **Codex auth エラー（`No authentication found` 等）**: `codex login` を再実行。`$env:OPENAI_API_KEY` が混ざっていないか確認（unset すること）
+- **`Decision:` が出ない**: Reviewer の最終 assistant メッセージが JSON で帰っていない可能性。Events タブで該当セッションを開き、最後の `assistant_message` の payload を確認。`feedback` だけ出るなら parser 経由は通っているが decision が undefined。
+- **retry が 3 回で止まらない**: 起きないはず（IMPLEMENTER_PROMPT の soft cap が 3）。長引くなら Stop からの `legion cleanup --yes` で手動 cleanup。
+- **server boot に `[legion] codex provider is registered but no ChatGPT OAuth ...` 警告**: codex auth がない状態。trigger 前に解決すること。
+
 ## 参考
 
-- workflows: [workflows/feature-implementation.yaml](../../../workflows/feature-implementation.yaml), [workflows/bug-fix.yaml](../../../workflows/bug-fix.yaml)
+- workflows: [workflows/feature-implementation.yaml](../../../workflows/feature-implementation.yaml), [workflows/bug-fix.yaml](../../../workflows/bug-fix.yaml), [workflows/feature-with-review.yaml](../../../workflows/feature-with-review.yaml)
 - Phase 2 narrow scope design: [docs/dev/specs/2026-05-14_phase2_design.md](../specs/2026-05-14_phase2_design.md)
-- 直近の handoff: [docs/dev/handoff/2026-05-14_5.md](../handoff/2026-05-14_5.md)
+- Phase 3 design: [docs/dev/specs/2026-05-14_phase3_design.md](../specs/2026-05-14_phase3_design.md)
+- 直近の handoff: [docs/dev/handoff/2026-05-15.md](../handoff/2026-05-15.md)
