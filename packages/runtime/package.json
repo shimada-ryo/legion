@@ -27,6 +27,7 @@
     "./orchestrator/instance-store": "./src/orchestrator/instance-store.ts",
     "./orchestrator/spawn-agent": "./src/orchestrator/spawn-agent.ts",
     "./orchestrator/trigger": "./src/orchestrator/trigger.ts",
+    "./orchestrator/graph-walker": "./src/orchestrator/graph-walker.ts",
     "./store/agent-instance-store": "./src/store/agent-instance-store.ts"
   },
   "dependencies": {
