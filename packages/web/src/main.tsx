@@ -8,6 +8,7 @@ import '@fontsource-variable/jetbrains-mono'
 
 import './styles.css'
 import './styles/tokens.css'
+import './styles/react-flow.css'
 
 import { ThemeProvider } from './theme/ThemeProvider'
 import App from './App'

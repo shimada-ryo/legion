@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -10,9 +10,17 @@ import '@xyflow/react/dist/style.css'
 import type { WorkflowTemplate } from '@legion/core'
 import { nodeStyleFor, edgeStyleFor } from './template-canvas/styling'
 import { layoutTemplate } from './template-canvas/layout'
+import { useTheme } from '../theme/ThemeProvider'
 
 export default function TemplateCanvas({ template }: { template: WorkflowTemplate }) {
   const positions = useMemo(() => layoutTemplate(template), [template])
+  const { resolved } = useTheme()
+
+  const [dotColor, setDotColor] = useState('')
+  useEffect(() => {
+    const cs = getComputedStyle(document.documentElement)
+    setDotColor(cs.getPropertyValue('--canvas-grid').trim())
+  }, [resolved])
 
   const nodes = useMemo<Node[]>(
     () =>
@@ -25,7 +33,6 @@ export default function TemplateCanvas({ template }: { template: WorkflowTemplat
           data: { label: style.label },
           style: {
             padding: 8,
-            background: style.background,
             border: `2px solid ${style.border}`,
             borderRadius: 6,
             fontSize: 12,
@@ -64,7 +71,7 @@ export default function TemplateCanvas({ template }: { template: WorkflowTemplat
         nodesDraggable={false}
         nodesConnectable={false}
       >
-        <Background />
+        <Background color={dotColor} />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>

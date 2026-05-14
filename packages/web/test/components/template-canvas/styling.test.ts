@@ -6,7 +6,7 @@ import {
 import type { TemplateNode } from '@legion/core'
 
 describe('nodeStyleFor', () => {
-  test('returns distinct background color per node type', () => {
+  test('returns distinct border color per node type', () => {
     const r = nodeStyleFor({
       type: 'role',
       id: 'x',
@@ -18,8 +18,8 @@ describe('nodeStyleFor', () => {
     const b = nodeStyleFor({ type: 'blackboard', id: 'x', schema: {} } satisfies TemplateNode)
     const h = nodeStyleFor({ type: 'human-gate', id: 'x', label: 'L' } satisfies TemplateNode)
     const s = nodeStyleFor({ type: 'sink', id: 'x', kind: 'github-pr' } satisfies TemplateNode)
-    const bgs = [r.background, t.background, b.background, h.background, s.background]
-    expect(new Set(bgs).size).toBe(5)
+    const borders = [r.border, t.border, b.border, h.border, s.border]
+    expect(new Set(borders).size).toBe(5)
   })
 
   test('role node style includes role name in label', () => {

@@ -1,18 +1,9 @@
 import type { TemplateNode, EdgeType } from '@legion/core'
 
 export interface NodeStyle {
-  background: string
   border: string
   label: string
   shape?: 'rect' | 'diamond' | 'parallelogram'
-}
-
-const TYPE_BG: Record<TemplateNode['type'], string> = {
-  trigger: '#e8e8e8',
-  role: '#e8f0ff',
-  blackboard: '#f4e8ff',
-  'human-gate': '#fff5d6',
-  sink: '#e8e8d8',
 }
 
 const TYPE_BORDER: Record<TemplateNode['type'], string> = {
@@ -24,7 +15,6 @@ const TYPE_BORDER: Record<TemplateNode['type'], string> = {
 }
 
 export function nodeStyleFor(node: TemplateNode): NodeStyle {
-  const background = TYPE_BG[node.type]
   const border = TYPE_BORDER[node.type]
   let label = `${node.id}`
   if (node.type === 'role') label = `${node.role}\n(${node.lifetime})`
@@ -32,7 +22,7 @@ export function nodeStyleFor(node: TemplateNode): NodeStyle {
   if (node.type === 'blackboard') label = `📋 ${node.id}`
   if (node.type === 'human-gate') label = `🙋 ${node.label}`
   if (node.type === 'sink') label = `${node.id} (${node.kind})`
-  return { background, border, label }
+  return { border, label }
 }
 
 export interface EdgeStyle {

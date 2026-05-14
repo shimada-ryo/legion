@@ -1,0 +1,57 @@
+/* Theme overrides for @xyflow/react. Loaded after @xyflow/react/dist/style.css. */
+
+.react-flow__node {
+  background: var(--node-bg);
+  border: 1px solid var(--node-border);
+  color: var(--fg-primary);
+  border-radius: 6px;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+.react-flow__node.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.react-flow__edge-path {
+  stroke: var(--edge);
+  stroke-width: 1.5;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.react-flow__background {
+  background-color: var(--bg-surface);
+}
+
+.react-flow__controls {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.react-flow__controls button {
+  background: transparent;
+  color: var(--fg-primary);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.react-flow__controls button:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.react-flow__minimap {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+}
+
+/* No transition on canvas internals — switching themes is instant. */
+.react-flow,
+.react-flow * {
+  transition: none !important;
+}
