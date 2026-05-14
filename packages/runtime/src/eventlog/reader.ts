@@ -39,6 +39,24 @@ export class EventLogReader {
     return rows.map(rowToEvent)
   }
 
+  historyWithSeq(
+    workflowInstanceId: string,
+    opts: HistoryOptions = {},
+  ): Array<{ event: AgentEvent; seq: number }> {
+    const afterSeq = opts.afterSeq ?? 0
+    const limit = opts.limit ?? 1000
+    const rows = this.db
+      .query<Row, [string, number, number]>(
+        `SELECT seq, event_id, workflow_instance_id, session_id, type, payload_json, timestamp_iso
+         FROM events
+         WHERE workflow_instance_id = ? AND seq > ?
+         ORDER BY seq ASC
+         LIMIT ?`,
+      )
+      .all(workflowInstanceId, afterSeq, limit)
+    return rows.map((r) => ({ event: rowToEvent(r), seq: r.seq }))
+  }
+
   /** Subscribe to live events. Returns a stop function. */
   tail(
     workflowInstanceId: string,

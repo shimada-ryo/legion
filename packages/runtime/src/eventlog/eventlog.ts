@@ -34,6 +34,13 @@ export class EventLog {
     return this.reader.history(workflowInstanceId, opts)
   }
 
+  historyWithSeq(
+    workflowInstanceId: string,
+    opts?: HistoryOptions,
+  ): Array<{ event: AgentEvent; seq: number }> {
+    return this.reader.historyWithSeq(workflowInstanceId, opts)
+  }
+
   tail(
     workflowInstanceId: string,
     handler: (e: AgentEvent, seq: number) => void,

@@ -9,6 +9,8 @@ import { TemplateRegistry } from '@legion/runtime/template/registry'
 import { initEventLogSchema } from '@legion/runtime/eventlog/schema'
 import { initInstanceSchema } from '@legion/runtime/orchestrator/instance-store'
 import type { AgentProvider } from '@legion/core'
+import { wsHandlers } from '../../src/ws/event-stream'
+import type { AppRuntime } from '@legion/server/app'
 
 const REPO_ROOT = resolve(import.meta.dir, '../../../..')
 
@@ -79,6 +81,53 @@ afterEach(async () => {
   await server.stop()
   await rm(baseDir, { recursive: true, force: true })
   await repo.cleanup()
+})
+
+describe('wsHandlers unit', () => {
+  test('no events dropped when an event arrives during history fetch (subscribe-first)', () => {
+    const wfId = 'wf-race'
+
+    const ev = (id: string, seq: number) =>
+      ({ event: { id, sessionId: 's', type: 'message' as const, payload: {}, timestamp: new Date() }, seq })
+
+    // Fully self-contained mock log: no real DB needed for the unit test.
+    type Handler = (e: { id: string }, seq: number) => void
+    let handlers: Map<symbol, Handler> = new Map()
+    let historyCallCount = 0
+
+    const mockLog = {
+      historyWithSeq: (_id: string) => {
+        historyCallCount++
+        const history = [ev('e1', 1), ev('e2', 2)]
+        // Simulate the race: fire e-race into already-subscribed handlers
+        // (seq 3, which is > lastHistorySeq=2 so it must be replayed).
+        for (const h of handlers.values()) h({ id: 'e-race' } as never, 3)
+        return history
+      },
+      tail: (_id: string, handler: Handler) => {
+        const key = Symbol()
+        handlers.set(key, handler)
+        return () => { handlers.delete(key) }
+      },
+    }
+
+    const received: string[] = []
+    const mockWs = {
+      data: { workflowInstanceId: wfId, stop: null as (() => void) | null },
+      send: (msg: string) => { received.push((JSON.parse(msg) as { id: string }).id) },
+    }
+
+    const ctx = { log: mockLog } as unknown as AppRuntime
+    wsHandlers(ctx).open(mockWs as never)
+
+    // After open, the direct-send tail is active; fire e4 through it.
+    for (const h of handlers.values()) h({ id: 'e4' } as never, 4)
+
+    expect(historyCallCount).toBe(1)
+    expect(received).toEqual(['e1', 'e2', 'e-race', 'e4'])
+
+    if (mockWs.data.stop) mockWs.data.stop()
+  })
 })
 
 describe('WS /api/ws/instances/:id/events', () => {
