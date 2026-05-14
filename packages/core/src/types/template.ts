@@ -1,6 +1,11 @@
 // D-018, D-019: Workflow Template — stored as YAML in workflows/, cached in DB.
 // Layer 1 of the two-layer model (D-012, D-013).
 
+export interface NodePosition {
+  x: number
+  y: number
+}
+
 export type EdgeType =
   | 'triggers'
   | 'delegates'
@@ -21,30 +26,35 @@ export interface RoleNode {
   role: string
   provider: string
   lifetime: RoleLifetime
+  position?: NodePosition
 }
 
 export interface TriggerNode {
   type: 'trigger'
   id: string
   kind: TriggerKind
+  position?: NodePosition
 }
 
 export interface BlackboardNode {
   type: 'blackboard'
   id: string
   schema: Record<string, string>
+  position?: NodePosition
 }
 
 export interface HumanGateNode {
   type: 'human-gate'
   id: string
   label: string
+  position?: NodePosition
 }
 
 export interface SinkNode {
   type: 'sink'
   id: string
   kind: SinkKind
+  position?: NodePosition
 }
 
 export type TemplateNode =
