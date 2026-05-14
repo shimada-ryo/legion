@@ -30,7 +30,7 @@ export default function DiffTab({ instanceId }: { instanceId: string }) {
     }
   }, [instanceId])
 
-  if (err) return <div style={{ color: '#b00' }}>Error: {err}</div>
+  if (err) return <div style={{ color: 'var(--status-error)' }}>Error: {err}</div>
   if (!items) return <div>Loading…</div>
   if (items.length === 0) return <div>No agent diffs yet.</div>
   return (
@@ -41,7 +41,7 @@ export default function DiffTab({ instanceId }: { instanceId: string }) {
             onClick={() =>
               setOpen((o) => ({ ...o, [d.agentInstanceId]: !o[d.agentInstanceId] }))
             }
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--fg-primary)' }}
           >
             {open[d.agentInstanceId] ? '▼' : '▶'} {d.agentInstanceId} ({d.branch})
           </button>
@@ -49,8 +49,11 @@ export default function DiffTab({ instanceId }: { instanceId: string }) {
             <pre
               style={{
                 fontSize: 11,
-                background: '#1e1e1e',
-                color: '#ddd',
+                fontFamily: 'var(--font-mono)',
+                background: 'var(--bg-canvas)',
+                color: 'var(--fg-primary)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 4,
                 padding: 8,
                 overflow: 'auto',
               }}

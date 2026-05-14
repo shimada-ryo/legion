@@ -100,13 +100,13 @@ export default function OverviewTab({
           ? latestDecisionFor(a.id, blackboardMessages)
           : undefined
         return (
-          <div key={a.id} style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #eee' }}>
+          <div key={a.id} style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-default)' }}>
             <div><strong>Agent:</strong> {a.id}</div>
             <div><strong>Status:</strong> {a.status}</div>
             {a.branchName && <div><strong>Branch:</strong> {a.branchName}</div>}
             <div><strong>Workspace:</strong> {a.workspace.path}</div>
             {decision && (
-              <div style={{ marginTop: 6, padding: 6, background: '#f8f8ff', border: '1px solid #dde' }}>
+              <div style={{ marginTop: 6, padding: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
                 <div><strong>Decision:</strong> <span data-decision={decision.decision}>{decision.decision}</span></div>
                 {decision.feedback && (
                   <div style={{ marginTop: 4, whiteSpace: 'pre-wrap' }}>
@@ -114,7 +114,7 @@ export default function OverviewTab({
                   </div>
                 )}
                 {decision.notes && (
-                  <div style={{ marginTop: 4, fontStyle: 'italic', color: '#666' }}>
+                  <div style={{ marginTop: 4, fontStyle: 'italic', color: 'var(--fg-muted)' }}>
                     {decision.notes}
                   </div>
                 )}

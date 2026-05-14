@@ -10,10 +10,10 @@ export default function ToolCallEvent({ event }: { event: AgentEvent }) {
     kind?: string
   }
   return (
-    <div style={{ padding: 8, border: '1px solid #ddd', borderRadius: 6, margin: '4px 0' }}>
+    <div style={{ padding: 8, background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 6, margin: '4px 0' }}>
       <button
         onClick={() => setOpen((v) => !v)}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--fg-primary)' }}
       >
         {open ? '▼' : '▶'} tool {p.name ?? '?'} {p.kind === 'result' ? '(result)' : ''}
       </button>

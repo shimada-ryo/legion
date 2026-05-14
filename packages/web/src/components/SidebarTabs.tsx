@@ -23,7 +23,7 @@ export default function SidebarTabs(props: SidebarTabsProps) {
   const [tab, setTab] = useState<TabName>('Overview')
   return (
     <div>
-      <div style={{ borderBottom: '1px solid #ddd' }}>
+      <div style={{ borderBottom: '1px solid var(--border-default)' }}>
         {TABS.map((t) => (
           <button
             key={t}
@@ -31,7 +31,8 @@ export default function SidebarTabs(props: SidebarTabsProps) {
             style={{
               padding: 8,
               border: 'none',
-              background: tab === t ? '#eef' : 'transparent',
+              background: tab === t ? 'var(--bg-elevated)' : 'transparent',
+              color: 'var(--fg-primary)',
               cursor: 'pointer',
             }}
           >
