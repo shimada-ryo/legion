@@ -23,6 +23,39 @@ describe('defaultSystemPromptFor', () => {
   })
 })
 
+describe('IMPLEMENTER_PROMPT (Phase 3 retry loop)', () => {
+  test('instructs Implementer to call delegate(role=reviewer) after committing', () => {
+    const p = defaultSystemPromptFor('implementer')
+    expect(p).toContain("delegate(role='reviewer'")
+    expect(p).toContain('After you commit')
+  })
+
+  test('explains all three decision outcomes', () => {
+    const p = defaultSystemPromptFor('implementer')
+    expect(p).toContain('approve')
+    expect(p).toContain('request-changes')
+    expect(p).toContain('reject')
+  })
+
+  test('enforces a soft cap of 3 review iterations', () => {
+    const p = defaultSystemPromptFor('implementer')
+    expect(p).toContain('3')
+    expect(p).toContain('iterations')
+  })
+
+  test('describes the no-reviewer fallback so Phase 2 workflows still work', () => {
+    const p = defaultSystemPromptFor('implementer')
+    expect(p).toContain('no reviewer is configured')
+  })
+
+  test('retains Phase 2 commit-required instructions', () => {
+    const p = defaultSystemPromptFor('implementer')
+    expect(p).toContain('git add -A && git commit')
+    expect(p).toContain('worktree')
+    expect(p).toContain('MUST commit before ending')
+  })
+})
+
 describe('REVIEWER_PROMPT (Phase 3)', () => {
   test('reviewer prompt mentions structured output and decision values', () => {
     const p = defaultSystemPromptFor('reviewer')

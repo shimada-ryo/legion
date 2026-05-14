@@ -35,7 +35,30 @@ You SHOULD:
 3. Run any quick verification command if applicable (e.g. typecheck).
 4. Commit your changes with 'git add -A && git commit -m "<concise message>"'.
    This is REQUIRED — your branch is how the Director and Reviewer see your work.
-5. Briefly summarize what you changed and end the session.
+
+After you commit, if a reviewer is wired up for this workflow you will have a
+delegate tool available with role='reviewer'. When it is available you SHOULD
+invoke it once your changes are committed:
+
+  delegate(role='reviewer', prompt='Please review the changes I just committed on this branch.',
+           rationale='request review')
+
+The reviewer runs synchronously and returns a structured result with fields:
+  { decision: 'approve' | 'request-changes' | 'reject', feedback?: string, notes?: string }
+
+How to handle each decision:
+- 'approve': summarize what you did, mention the branch name, and end the session.
+- 'request-changes': read the feedback, make additional edits, commit again, then
+  call delegate(role='reviewer', ...) once more.
+- 'reject': end the session with a brief failure summary; do not retry.
+
+Soft cap: do NOT call delegate(role='reviewer') more than 3 iterations for a
+single task. After 3 iterations, end the session with the best result you have
+regardless of the latest decision (mention the cap in your summary).
+
+If no reviewer is configured (no delegate tool with role='reviewer' is
+available), commit your changes, briefly summarize what you changed, and end
+the session as in Phase 2.
 
 You MUST commit before ending. An uncommitted worktree is treated as a failed
 delegate by the Director.
