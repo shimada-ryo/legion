@@ -1,5 +1,7 @@
 import type { RoleNode, WorkflowTemplate } from '@legion/core'
+import { defaultSystemPromptFor } from '../adapter/role-prompts'
 
+// firstRoleNode is removed in Task 12; keep it here until then.
 export function firstRoleNode(template: WorkflowTemplate): RoleNode | null {
   // Find a Role that is the direct target of a 'triggers' edge from a trigger node.
   const triggers = template.nodes.filter((n) => n.type === 'trigger').map((n) => n.id)
@@ -14,10 +16,12 @@ export function firstRoleNode(template: WorkflowTemplate): RoleNode | null {
   return r && r.type === 'role' ? r : null
 }
 
-export function buildInitialPrompt(role: RoleNode, userPrompt: string): string {
+export function buildInitialPrompt(input: { role: string; userPrompt: string }): string {
+  const sys = defaultSystemPromptFor(input.role)
+  if (sys) return `${sys}\n\nTask: ${input.userPrompt}`
   return [
-    `You are operating as the "${role.role}" role in a legion workflow.`,
+    `You are operating as the "${input.role}" role in a legion workflow.`,
     `Your task:`,
-    userPrompt,
+    input.userPrompt,
   ].join('\n\n')
 }

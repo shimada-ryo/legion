@@ -50,7 +50,7 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
   const handle = await input.adapter.launch({
     workdir: workspace.path,
     role: role.role,
-    initialPrompt: buildInitialPrompt(role, input.userPrompt),
+    initialPrompt: buildInitialPrompt({ role: role.role, userPrompt: input.userPrompt }),
   })
   // Drain the stream in the background; events flow into the event log.
   void drainStream(input, instance.id, handle.sessionId)
