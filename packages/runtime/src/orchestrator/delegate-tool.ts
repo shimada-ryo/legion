@@ -82,6 +82,14 @@ export interface DelegateToolDeps {
   template: WorkflowTemplate
   baseCommitSha: string
   blackboardStore: BlackboardStore
+  /**
+   * Builds an MCP server bundle keyed to the given (spawned) agent. Used to
+   * wire the `delegate` tool into Claude-side launches so Implementer agents
+   * can self-delegate to a Reviewer (Phase 3). Codex provider ignores it.
+   * Optional; when omitted, spawned agents launch without legion MCP (useful
+   * for unit tests that mock the provider).
+   */
+  legionMcpFactory?: (parentAgentInstanceId: string) => Record<string, unknown>
 }
 
 const SUMMARY_MAX = 500
@@ -304,10 +312,12 @@ export class DelegateToolHandler {
         role: input.role,
         hasOutputSchema: outputSchema !== undefined,
       })
+      const childMcp = this.deps.legionMcpFactory?.(agentInstanceId)
       const handle = await provider.launch({
         workdir: workspacePath,
         role: input.role,
         initialPrompt: `${defaultSystemPromptFor(input.role)}\n\nTask: ${input.prompt}`,
+        ...(childMcp !== undefined ? { mcpServers: childMcp } : {}),
         ...(outputSchema !== undefined ? { outputSchema } : {}),
       })
       sessionId = handle.sessionId

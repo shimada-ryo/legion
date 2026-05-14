@@ -1,7 +1,7 @@
 import { ulid } from 'ulid'
 import { z } from 'zod'
 import { tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk'
-import type { WorkflowTemplate, AgentProvider, DelegateToolInput } from '@legion/core'
+import type { WorkflowTemplate, AgentProvider, AgentEvent, DelegateToolInput } from '@legion/core'
 import type { EventLog } from '../eventlog/eventlog'
 import type { InstanceStore } from './instance-store'
 import { PENDING_SESSION_ID, type AgentInstanceStore } from '../store/agent-instance-store'
@@ -93,37 +93,42 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
     config,
   })
 
-  const delegateHandler = new DelegateToolHandler({
+  // Build a recursive MCP factory: every spawned agent gets a fresh MCP server
+  // whose `delegate` tool closes over a fresh handler scoped to that agent.
+  // This is what lets Implementer self-delegate to a Reviewer (Phase 3).
+  const sharedDeps = {
     workflowInstanceId: instance.id,
-    parentAgentInstanceId: directorAgentInstanceId,
     agentInstanceStore: input.agentInstanceStore,
     workspaceProvider: input.workspaceProvider,
     providers: input.providersByName,
-    eventLog: { write: (evt) => input.eventLog.append(instance.id, evt) },
+    eventLog: { write: (evt: AgentEvent) => input.eventLog.append(instance.id, evt) },
     template: input.template,
     baseCommitSha,
     blackboardStore: input.blackboardStore,
-  })
-  const delegateTool = tool(
-    'delegate',
-    'Spawn an Implementer agent and wait for it to finish. Returns { agentInstanceId, branchName, status, summary }.',
-    {
-      role: z.string(),
-      prompt: z.string(),
-      rationale: z.string().optional(),
-    },
-    async (args) => {
-      const result = await delegateHandler.handle(args as DelegateToolInput)
-      return {
-        content: [{ type: 'text' as const, text: JSON.stringify(result) }],
-      }
-    },
-  )
-
-  const legionMcpServer = createSdkMcpServer({
-    name: 'legion',
-    tools: [delegateTool],
-  })
+  }
+  const legionMcpFactory = (parentAgentInstanceId: string): Record<string, unknown> => {
+    const childHandler = new DelegateToolHandler({
+      ...sharedDeps,
+      parentAgentInstanceId,
+      legionMcpFactory,
+    })
+    const delegateTool = tool(
+      'delegate',
+      'Spawn an agent (Implementer or Reviewer) and wait for it to finish. Returns { agentInstanceId, branchName, status, summary, decision?, feedback? }.',
+      {
+        role: z.string(),
+        prompt: z.string(),
+        rationale: z.string().optional(),
+      },
+      async (args) => {
+        const result = await childHandler.handle(args as DelegateToolInput)
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+        }
+      },
+    )
+    return { legion: createSdkMcpServer({ name: 'legion', tools: [delegateTool] }) }
+  }
 
   const handle = await directorProvider.launch({
     workdir: directorWs.path,
@@ -132,7 +137,7 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
       role: directorNode.role,
       userPrompt: input.userPrompt,
     }),
-    mcpServers: { legion: legionMcpServer },
+    mcpServers: legionMcpFactory(directorAgentInstanceId),
   })
 
   input.agentInstanceStore.updateSessionId(directorAgentInstanceId, handle.sessionId)
