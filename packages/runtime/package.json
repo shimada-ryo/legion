@@ -29,6 +29,7 @@
     "./orchestrator/spawn-agent": "./src/orchestrator/spawn-agent.ts",
     "./orchestrator/trigger": "./src/orchestrator/trigger.ts",
     "./orchestrator/graph-walker": "./src/orchestrator/graph-walker.ts",
+    "./orchestrator/template-validate": "./src/orchestrator/template-validate.ts",
     "./orchestrator/delegate-tool": "./src/orchestrator/delegate-tool.ts",
     "./store/agent-instance-store": "./src/store/agent-instance-store.ts",
     "./store/blackboard-store": "./src/store/blackboard-store.ts"
