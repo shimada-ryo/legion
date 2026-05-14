@@ -141,4 +141,52 @@ describe('GET /api/instances and /api/instances/:id', () => {
     expect(detail.id).toBe(workflowInstanceId)
     expect(Array.isArray(detail.events)).toBe(true)
   })
+
+  test('GET /api/instances/:id returns agentInstances populated with parent / branch', async () => {
+    const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        templateId: 'feature-implementation',
+        userPrompt: 'x',
+      }),
+    })
+    const { workflowInstanceId } = (await trig.json()) as { workflowInstanceId: string }
+    await new Promise((r) => setTimeout(r, 100))
+
+    server.runtime.agentInstanceStore.insert({
+      id: 'impl-1',
+      workflowInstanceId,
+      roleNodeId: 'implementer',
+      sessionId: 'sess-impl',
+      parentAgentInstanceId: 'dir-synth',
+      spawnEdgeId: 'director→implementer',
+      status: 'completed',
+      workspaceKind: 'owned',
+      workspacePath: '/tmp/wt/impl',
+      branchName: 'legion/x/impl-1',
+      startedAt: new Date(),
+      endedAt: new Date(),
+    })
+
+    const detailRes = await fetch(
+      `http://localhost:${server.port}/api/instances/${workflowInstanceId}`,
+    )
+    const detail = (await detailRes.json()) as {
+      agentInstances: Array<{
+        id: string
+        roleNodeId: string
+        parentAgentInstanceId?: string
+        branchName?: string
+        workspace: { kind: string; path: string }
+      }>
+    }
+    expect(Array.isArray(detail.agentInstances)).toBe(true)
+    expect(detail.agentInstances.length).toBeGreaterThanOrEqual(2)
+    const impl = detail.agentInstances.find((a) => a.id === 'impl-1')
+    expect(impl).toBeDefined()
+    expect(impl!.parentAgentInstanceId).toBe('dir-synth')
+    expect(impl!.branchName).toBe('legion/x/impl-1')
+    expect(impl!.workspace.kind).toBe('owned')
+  })
 })

@@ -47,6 +47,23 @@ export function handleInstanceDetail(id: string, ctx: AppRuntime): Response {
   const inst = ctx.store.get(id)
   if (!inst) return new Response('Not Found', { status: 404 })
   const events = ctx.log.history(id)
+  const rows = ctx.agentInstanceStore.listByWorkflow(id)
+  const agentInstances = rows.map((r) => ({
+    id: r.id,
+    roleNodeId: r.roleNodeId,
+    workflowInstanceId: r.workflowInstanceId,
+    sessionId: r.sessionId,
+    status: r.status,
+    parentAgentInstanceId: r.parentAgentInstanceId ?? undefined,
+    spawnEdgeId: r.spawnEdgeId ?? undefined,
+    workspace: { kind: r.workspaceKind, path: r.workspacePath } as const,
+    branchName: r.branchName ?? undefined,
+    tasks: [],
+    inbox: [],
+    subscriptions: [],
+    startedAt: r.startedAt.toISOString(),
+    endedAt: r.endedAt ? r.endedAt.toISOString() : null,
+  }))
   return Response.json({
     id: inst.id,
     templateId: inst.templateId,
@@ -54,6 +71,7 @@ export function handleInstanceDetail(id: string, ctx: AppRuntime): Response {
     status: inst.status,
     startedAt: inst.startedAt.toISOString(),
     endedAt: inst.endedAt ? inst.endedAt.toISOString() : null,
+    agentInstances,
     events,
   })
 }
