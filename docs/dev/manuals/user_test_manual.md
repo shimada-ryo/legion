@@ -153,7 +153,7 @@ bun "$env:TEMP\inspect-agents.ts" "$env:USERPROFILE\.legion\legion.db"
 
 ## Phase 3 動作確認（Reviewer + Codex）
 
-Phase 3 narrow scope では Reviewer ロール（Codex provider）と Blackboard、Reviewer の retry loop（最大 3 回）を追加しました。下記は Phase 2 narrow の動作確認に加えて Phase 3 特有の挙動を観察する手順です。
+Phase 3 では Reviewer ロール（Codex provider）と Blackboard、Reviewer の retry loop（最大 3 回）を追加しました。下記は Phase 2 narrow の動作確認に加えて Phase 3 特有の挙動を観察する手順です。
 
 ### 追加の前提
 
