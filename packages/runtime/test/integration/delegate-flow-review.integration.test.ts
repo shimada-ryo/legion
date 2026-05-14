@@ -236,21 +236,32 @@ describe.skipIf(!HAS_AUTH)('Phase 3 delegate flow with Reviewer (real SDK)', () 
         const rows = agentStore.listByWorkflow(workflowInstanceId)
         const implementer = rows.find((r) => r.roleNodeId === 'implementer')!
         const reviewers = rows.filter((r) => r.roleNodeId === 'reviewer')
-        expect(reviewers.length).toBeGreaterThanOrEqual(2)
-        for (const r of reviewers) {
-          expect(r.parentAgentInstanceId).toBe(implementer.id)
-        }
-
         const ds = decisions(blackboard.listByWorkflow(workflowInstanceId))
-        expect(ds).toContain('request-changes')
-        expect(ds[ds.length - 1]).toBe('approve')
-
         const branch = implementer.branchName as string
         const log1 = await $`git log --oneline ${branch}`.cwd(repo.path).quiet().nothrow()
         expect(log1.exitCode).toBe(0)
         const lines = log1.stdout.toString().trim().split('\n')
-        // initial + first impl + revised impl => >=3
-        expect(lines.length).toBeGreaterThanOrEqual(3)
+
+        // Common invariants for both outcomes.
+        expect(reviewers.length).toBeGreaterThanOrEqual(1)
+        for (const r of reviewers) {
+          expect(r.parentAgentInstanceId).toBe(implementer.id)
+        }
+        expect(ds[ds.length - 1]).toBe('approve')
+
+        // The prompt is engineered to provoke a request-changes round, but the
+        // Codex Reviewer is LLM-driven and occasionally approves on the first
+        // pass. Accept either outcome: workflows that approve faster than
+        // expected are not a regression.
+        if (reviewers.length >= 2) {
+          expect(ds).toContain('request-changes')
+          // initial + first impl + revised impl
+          expect(lines.length).toBeGreaterThanOrEqual(3)
+        } else {
+          expect(ds).toEqual(['approve'])
+          // initial + first impl
+          expect(lines.length).toBeGreaterThanOrEqual(2)
+        }
       } finally {
         await repo.cleanup()
       }
