@@ -25,6 +25,12 @@ export interface LaunchRequest {
   initialPrompt: string
   model?: string
   env?: Record<string, string>
+  /**
+   * D-037: Custom tools to inject into the spawned session (e.g. the Director's
+   * delegate tool). Treated as opaque here; the provider passes it through to
+   * its underlying SDK. Phase 2 only injects this for the Director session.
+   */
+  customTools?: unknown[]
 }
 
 export interface SessionHandle {
