@@ -26,7 +26,7 @@ export default function DiffTab({ instanceId }: { instanceId: string }) {
   }, [instanceId])
 
   if (!items) return <div>Loading…</div>
-  if (items.length === 0) return <div>No worktrees yet.</div>
+  if (items.length === 0) return <div>No agent diffs yet.</div>
   return (
     <div>
       {items.map((d) => (
@@ -37,7 +37,7 @@ export default function DiffTab({ instanceId }: { instanceId: string }) {
             }
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
-            {open[d.agentInstanceId] ? '▼' : '▶'} {d.branch}
+            {open[d.agentInstanceId] ? '▼' : '▶'} {d.agentInstanceId} ({d.branch})
           </button>
           {open[d.agentInstanceId] && (
             <pre
