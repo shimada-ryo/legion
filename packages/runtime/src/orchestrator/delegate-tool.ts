@@ -35,6 +35,24 @@ export class DelegateToolHandler {
   constructor(private readonly deps: DelegateToolDeps) {}
 
   async handle(input: DelegateToolInput): Promise<DelegateToolOutput> {
+    const { agentInstanceId, branchName, workspacePath } = await this.resolveSpawnInputs(input)
+    const { summary, status, error } = await this.runSpawnedAgent(
+      agentInstanceId,
+      input,
+      workspacePath,
+    )
+    return {
+      agentInstanceId,
+      branchName,
+      status,
+      summary: summary.slice(0, SUMMARY_MAX),
+      ...(error !== undefined ? { error } : {}),
+    }
+  }
+
+  private async resolveSpawnInputs(
+    input: DelegateToolInput,
+  ): Promise<{ agentInstanceId: string; branchName: string; workspacePath: string }> {
     const parentRow = this.deps.agentInstanceStore.byId(this.deps.parentAgentInstanceId)
     const fromRoleNodeId = parentRow?.roleNodeId ?? 'director'
 
@@ -102,13 +120,21 @@ export class DelegateToolHandler {
       endedAt: null,
     })
 
+    return { agentInstanceId, branchName, workspacePath: ws.path }
+  }
+
+  private async runSpawnedAgent(
+    agentInstanceId: string,
+    input: DelegateToolInput,
+    workspacePath: string,
+  ): Promise<{ summary: string; status: 'completed' | 'failed'; error?: string }> {
     let summary = ''
     let status: 'completed' | 'failed' = 'completed'
     let error: string | undefined
 
     try {
       const handle = await this.deps.provider.launch({
-        workdir: ws.path,
+        workdir: workspacePath,
         role: input.role,
         initialPrompt: `${defaultSystemPromptFor(input.role)}\n\nTask: ${input.prompt}`,
       })
@@ -133,13 +159,7 @@ export class DelegateToolHandler {
       )
     }
 
-    return {
-      agentInstanceId,
-      branchName,
-      status,
-      summary: summary.slice(0, SUMMARY_MAX),
-      ...(error !== undefined ? { error } : {}),
-    }
+    return { summary, status, ...(error !== undefined ? { error } : {}) }
   }
 
   private nextSeqForRole(roleNodeId: string): number {
