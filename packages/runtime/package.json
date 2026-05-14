@@ -25,6 +25,7 @@
     "./eventlog/eventlog": "./src/eventlog/eventlog.ts",
     "./template/loader": "./src/template/loader.ts",
     "./template/registry": "./src/template/registry.ts",
+    "./template/writer": "./src/template/writer.ts",
     "./orchestrator/instance-store": "./src/orchestrator/instance-store.ts",
     "./orchestrator/spawn-agent": "./src/orchestrator/spawn-agent.ts",
     "./orchestrator/trigger": "./src/orchestrator/trigger.ts",
