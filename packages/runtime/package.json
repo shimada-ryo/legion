@@ -37,6 +37,7 @@
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.140",
     "@legion/core": "workspace:*",
+    "@openai/codex-sdk": "^0.130.0",
     "ulid": "^3.0.2",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
