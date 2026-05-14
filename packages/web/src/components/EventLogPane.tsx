@@ -1,14 +1,24 @@
 import { useState, useMemo } from 'react'
 import type { AgentEvent } from '@legion/core'
-import type { AgentInstanceView } from '../types'
+import type { AgentInstanceView, BlackboardMessage } from '../types'
 
 export interface EventLogPaneProps {
   events: AgentEvent[]
   agentInstances?: AgentInstanceView[]
+  blackboardMessages?: BlackboardMessage[]
 }
 
-export default function EventLogPane({ events, agentInstances = [] }: EventLogPaneProps) {
+type EventRow = { kind: 'event'; e: AgentEvent }
+type BlackboardRow = { kind: 'blackboard'; m: BlackboardMessage }
+type Row = EventRow | BlackboardRow
+
+export default function EventLogPane({
+  events,
+  agentInstances = [],
+  blackboardMessages = [],
+}: EventLogPaneProps) {
   const [filterSessionId, setFilterSessionId] = useState<string | null>(null)
+  const [showBlackboard, setShowBlackboard] = useState(false)
 
   const labelForSession = useMemo(() => {
     const m = new Map<string, string>()
@@ -21,9 +31,15 @@ export default function EventLogPane({ events, agentInstances = [] }: EventLogPa
     return m
   }, [agentInstances])
 
-  const filtered = filterSessionId
-    ? events.filter((e) => e.sessionId === filterSessionId)
-    : events
+  const rows: Row[] = useMemo(() => {
+    const eventRows: Row[] = (filterSessionId
+      ? events.filter((e) => e.sessionId === filterSessionId)
+      : events
+    ).map((e) => ({ kind: 'event' as const, e }))
+    if (!showBlackboard) return eventRows
+    const bbRows: Row[] = blackboardMessages.map((m) => ({ kind: 'blackboard' as const, m }))
+    return [...eventRows, ...bbRows].sort((a, b) => timeOf(a) - timeOf(b))
+  }, [events, blackboardMessages, filterSessionId, showBlackboard])
 
   return (
     <div style={{ padding: 8, fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>
@@ -46,16 +62,36 @@ export default function EventLogPane({ events, agentInstances = [] }: EventLogPa
             {labelForSession.get(a.sessionId) ?? a.roleNodeId}
           </button>
         ))}
+        {blackboardMessages.length > 0 && (
+          <button
+            onClick={() => setShowBlackboard((v) => !v)}
+            aria-pressed={showBlackboard}
+            style={{ marginLeft: 8, fontWeight: showBlackboard ? 'bold' : 'normal' }}
+          >
+            blackboard
+          </button>
+        )}
       </div>
-      {filtered.map((e) => (
-        <div key={e.id}>
-          [{new Date(e.timestamp).toLocaleTimeString()}] {e.type} /{' '}
-          {labelForSession.get(e.sessionId) ?? e.sessionId.slice(0, 8)}{' '}
-          {stringifyPayload(e)}
-        </div>
-      ))}
+      {rows.map((row) =>
+        row.kind === 'event' ? (
+          <div key={row.e.id}>
+            [{new Date(row.e.timestamp).toLocaleTimeString()}] {row.e.type} /{' '}
+            {labelForSession.get(row.e.sessionId) ?? row.e.sessionId.slice(0, 8)}{' '}
+            {stringifyPayload(row.e)}
+          </div>
+        ) : (
+          <div key={`bb-${row.m.id}`} style={{ color: '#8800aa' }}>
+            [{new Date(row.m.publishedAt).toLocaleTimeString()}] [bb] {row.m.topic}{' '}
+            {JSON.stringify(row.m.payload).slice(0, 80)}
+          </div>
+        ),
+      )}
     </div>
   )
+}
+
+function timeOf(row: Row): number {
+  return row.kind === 'event' ? new Date(row.e.timestamp).getTime() : row.m.publishedAt
 }
 
 function stringifyPayload(e: AgentEvent): string {

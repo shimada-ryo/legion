@@ -2,7 +2,7 @@ import { describe, test, expect, afterEach } from 'bun:test'
 import { render, fireEvent, cleanup } from '@testing-library/react'
 import EventLogPane from '../../src/components/EventLogPane'
 import type { AgentEvent } from '@legion/core'
-import type { AgentInstanceView } from '../../src/types'
+import type { AgentInstanceView, BlackboardMessage } from '../../src/types'
 
 const EVENTS: AgentEvent[] = [
   { id: 'e1', sessionId: 'sess-dir', type: 'message', payload: { text: 'D' }, timestamp: new Date() },
@@ -32,5 +32,40 @@ describe('EventLogPane agent filter', () => {
     fireEvent.click(getByRole('button', { name: /director/i }))
     expect(container.textContent).toContain('D')
     expect(container.textContent).not.toContain('I')
+  })
+})
+
+describe('EventLogPane Blackboard overlay (Phase 3)', () => {
+  const BB: BlackboardMessage[] = [
+    {
+      id: 'b1',
+      workflowInstanceId: 'wf',
+      topic: 'system.review.decision',
+      publisherAgentId: null,
+      payload: { decision: 'approve' },
+      publishedAt: Date.now(),
+    },
+  ]
+
+  test('hides blackboard messages by default', () => {
+    const { container } = render(
+      <EventLogPane events={EVENTS} agentInstances={AGENTS} blackboardMessages={BB} />,
+    )
+    expect(container.textContent).not.toContain('system.review.decision')
+  })
+
+  test('toggling Blackboard chip surfaces blackboard messages', () => {
+    const { container, getByRole } = render(
+      <EventLogPane events={EVENTS} agentInstances={AGENTS} blackboardMessages={BB} />,
+    )
+    fireEvent.click(getByRole('button', { name: /blackboard/i }))
+    expect(container.textContent).toContain('system.review.decision')
+  })
+
+  test('omits the blackboard chip when no messages are present', () => {
+    const { queryByRole } = render(
+      <EventLogPane events={EVENTS} agentInstances={AGENTS} blackboardMessages={[]} />,
+    )
+    expect(queryByRole('button', { name: /blackboard/i })).toBeNull()
   })
 })
