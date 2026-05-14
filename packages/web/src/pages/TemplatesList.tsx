@@ -13,7 +13,7 @@ export default function TemplatesList() {
       .catch((e) => setError((e as Error).message))
   }, [])
 
-  if (error) return <div style={{ padding: 16, color: '#c22' }}>Error: {error}</div>
+  if (error) return <div style={{ padding: 16, color: 'var(--status-error)' }}>Error: {error}</div>
   if (!items) return <div style={{ padding: 16 }}>Loading…</div>
 
   return (
