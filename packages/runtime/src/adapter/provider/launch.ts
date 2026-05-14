@@ -40,7 +40,14 @@ export function launchSession(req: LaunchRequest, query: QueryFn): LaunchedSessi
     options: {
       cwd: req.workdir,
       allowedTools: allowed,
-      permissionMode: 'default',
+      // Spawned agents run inside per-agent worktrees and will eventually be
+      // sandboxed in Docker (memory: project_sandbox_direction). Bypassing the
+      // SDK's permission prompt avoids non-interactive hangs on common shell
+      // commands; the role's allowedTools list is the actual capability gate.
+      // canUseTool / ApprovalOrchestrator stay wired for future modes that
+      // re-enable prompting.
+      permissionMode: 'bypassPermissions',
+      allowDangerouslySkipPermissions: true,
       canUseTool: async (toolName: string, input: Record<string, unknown>) => {
         const d = await approval.decide({ tool: toolName, input })
         return d.allow

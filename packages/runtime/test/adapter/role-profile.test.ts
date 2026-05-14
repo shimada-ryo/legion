@@ -27,26 +27,23 @@ describe('defaultAllowedToolsFor', () => {
     expect(tools).toEqual([])
   })
 
-  test('implementer has at least one Bash subcommand pattern allowed', () => {
+  test('implementer has Bash catch-all (no subcommand whitelist)', () => {
+    // The launcher pairs this with permissionMode 'bypassPermissions', so a
+    // single 'Bash' entry is the capability gate; per-subcommand entries are
+    // intentionally absent (see role-profile.ts header comment).
     const tools = defaultAllowedToolsFor('implementer')
-    expect(tools.some((t) => t.startsWith('Bash('))).toBe(true)
+    expect(tools).toContain('Bash')
+    expect(tools.some((t) => t.startsWith('Bash('))).toBe(false)
   })
 
   test('director profile includes the delegate tool', () => {
     expect(defaultAllowedToolsFor('director')).toContain('mcp__legion__delegate')
   })
 
-  test('implementer profile includes git commit-related bash whitelisted entries', () => {
-    const p = defaultAllowedToolsFor('implementer')
-    expect(p).toContain('Bash(git add*)')
-    expect(p).toContain('Bash(git commit*)')
-    expect(p).toContain('Bash(git status*)')
-    expect(p).toContain('Bash(git diff*)')
-  })
-
-  test('reviewer profile remains read-only (no delegate, no git)', () => {
+  test('reviewer profile remains read-only (no delegate, no Bash)', () => {
     const p = defaultAllowedToolsFor('reviewer')
     expect(p).not.toContain('mcp__legion__delegate')
+    expect(p).not.toContain('Bash')
     expect(p.some((t) => t.startsWith('Bash('))).toBe(false)
   })
 
@@ -60,9 +57,7 @@ describe('defaultAllowedToolsFor', () => {
     const tools = defaultAllowedToolsFor('implementer')
     expect(tools).toContain('mcp__legion__delegate')
     expect(tools).toContain('mcp__legion__publish')
-    // Phase 2 narrow already adds Bash(git*) — preserved
-    expect(tools).toContain('Bash(git add*)')
-    expect(tools).toContain('Bash(git commit*)')
+    expect(tools).toContain('Bash')
   })
 
   test('reviewer profile is read-only plus mcp__legion__publish (no delegate)', () => {
