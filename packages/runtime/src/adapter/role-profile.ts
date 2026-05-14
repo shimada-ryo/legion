@@ -24,12 +24,19 @@ const IMPLEMENTER_GIT_WHITELIST = [
   'Bash(git diff*)',
 ] as const
 
-const DIRECTOR_TOOLS = [...READ_TOOLS, 'mcp__legion__delegate'] as const
-
 const PROFILES: Record<string, readonly string[]> = {
-  director: DIRECTOR_TOOLS,
-  implementer: [...EDIT_TOOLS, ...IMPLEMENTER_BASH_WHITELIST, ...IMPLEMENTER_GIT_WHITELIST],
-  reviewer: READ_TOOLS,
+  director: [...READ_TOOLS, 'mcp__legion__delegate', 'mcp__legion__publish'],
+  implementer: [
+    ...EDIT_TOOLS,
+    ...IMPLEMENTER_BASH_WHITELIST,
+    ...IMPLEMENTER_GIT_WHITELIST,
+    'mcp__legion__delegate', // Phase 3: self-delegate to reviewer (runtime-restricted)
+    'mcp__legion__publish',  // Phase 3: Blackboard publish
+  ],
+  reviewer: [
+    ...READ_TOOLS,
+    'mcp__legion__publish',  // Phase 3: reviewer can publish (subscribe deferred to Phase 4)
+  ],
 }
 
 export function defaultAllowedToolsFor(role: string): string[] {

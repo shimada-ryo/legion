@@ -49,4 +49,26 @@ describe('defaultAllowedToolsFor', () => {
     expect(p).not.toContain('mcp__legion__delegate')
     expect(p.some((t) => t.startsWith('Bash('))).toBe(false)
   })
+
+  test('director profile includes mcp__legion__delegate and mcp__legion__publish', () => {
+    const tools = defaultAllowedToolsFor('director')
+    expect(tools).toContain('mcp__legion__delegate')
+    expect(tools).toContain('mcp__legion__publish')
+  })
+
+  test('implementer profile includes mcp__legion__delegate and mcp__legion__publish (Phase 3)', () => {
+    const tools = defaultAllowedToolsFor('implementer')
+    expect(tools).toContain('mcp__legion__delegate')
+    expect(tools).toContain('mcp__legion__publish')
+    // Phase 2 narrow already adds Bash(git*) — preserved
+    expect(tools).toContain('Bash(git add*)')
+    expect(tools).toContain('Bash(git commit*)')
+  })
+
+  test('reviewer profile is read-only plus mcp__legion__publish (no delegate)', () => {
+    const tools = defaultAllowedToolsFor('reviewer')
+    expect(tools).toContain('mcp__legion__publish')
+    expect(tools).not.toContain('mcp__legion__delegate')
+    expect(tools).not.toContain('Edit')
+  })
 })
