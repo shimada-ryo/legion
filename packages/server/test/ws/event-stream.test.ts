@@ -83,6 +83,13 @@ afterEach(async () => {
   await repo.cleanup()
 })
 
+function emptyBbStore() {
+  return {
+    listByWorkflow: () => [],
+    tail: () => () => {},
+  }
+}
+
 describe('wsHandlers unit', () => {
   test('no events dropped when an event arrives during history fetch (subscribe-first)', () => {
     const wfId = 'wf-race'
@@ -114,10 +121,14 @@ describe('wsHandlers unit', () => {
     const received: string[] = []
     const mockWs = {
       data: { workflowInstanceId: wfId, stop: null as (() => void) | null },
-      send: (msg: string) => { received.push((JSON.parse(msg) as { id: string }).id) },
+      send: (msg: string) => {
+        const parsed = JSON.parse(msg) as { id?: string; type?: string }
+        if (parsed.type === 'blackboard.message') return
+        received.push(parsed.id!)
+      },
     }
 
-    const ctx = { log: mockLog } as unknown as AppRuntime
+    const ctx = { log: mockLog, blackboardStore: emptyBbStore() } as unknown as AppRuntime
     wsHandlers(ctx).open(mockWs as never)
 
     // After open, the direct-send tail is active; fire e4 through it.
@@ -125,6 +136,104 @@ describe('wsHandlers unit', () => {
 
     expect(historyCallCount).toBe(1)
     expect(received).toEqual(['e1', 'e2', 'e-race', 'e4'])
+
+    if (mockWs.data.stop) mockWs.data.stop()
+  })
+
+  test('sends blackboard.message events for both history and live messages (Phase 3)', () => {
+    const wfId = 'wf-bb'
+
+    const noopLog = {
+      historyWithSeq: () => [],
+      tail: () => () => {},
+    }
+
+    type BbHandler = (m: { id: string; topic: string }) => void
+    const bbHandlers = new Map<symbol, BbHandler>()
+    const bbHistory = [
+      { id: 'bb-1', workflowInstanceId: wfId, topic: 'system.delegate.start', publisherAgentId: null, payload: {}, publishedAt: 1 },
+      { id: 'bb-2', workflowInstanceId: wfId, topic: 'system.review.decision', publisherAgentId: null, payload: { decision: 'approve' }, publishedAt: 2 },
+    ]
+    const mockBb = {
+      listByWorkflow: (_id: string) => bbHistory,
+      tail: (_id: string, handler: BbHandler) => {
+        const key = Symbol()
+        bbHandlers.set(key, handler)
+        return () => { bbHandlers.delete(key) }
+      },
+    }
+
+    const received: { type: string; message: { id: string; topic: string } }[] = []
+    const mockWs = {
+      data: { workflowInstanceId: wfId, stop: null as (() => void) | null },
+      send: (msg: string) => {
+        const parsed = JSON.parse(msg) as { type?: string; message?: { id: string; topic: string } }
+        if (parsed.type === 'blackboard.message' && parsed.message) {
+          received.push({ type: parsed.type, message: parsed.message })
+        }
+      },
+    }
+
+    const ctx = { log: noopLog, blackboardStore: mockBb } as unknown as AppRuntime
+    wsHandlers(ctx).open(mockWs as never)
+
+    // After open, fire a live blackboard message.
+    for (const h of bbHandlers.values()) {
+      h({ id: 'bb-3', topic: 'user.summary' })
+    }
+
+    const topics = received.map((r) => r.message.topic)
+    expect(topics).toEqual(['system.delegate.start', 'system.review.decision', 'user.summary'])
+    expect(received.every((r) => r.type === 'blackboard.message')).toBe(true)
+
+    if (mockWs.data.stop) mockWs.data.stop()
+  })
+
+  test('blackboard race: messages arriving during history fetch are not duplicated or dropped', () => {
+    const wfId = 'wf-bb-race'
+
+    const noopLog = {
+      historyWithSeq: () => [],
+      tail: () => () => {},
+    }
+
+    type BbHandler = (m: { id: string; topic: string }) => void
+    const bbHandlers = new Map<symbol, BbHandler>()
+    const historyRows = [
+      { id: 'bb-1', workflowInstanceId: wfId, topic: 't1', publisherAgentId: null, payload: {}, publishedAt: 1 },
+      { id: 'bb-2', workflowInstanceId: wfId, topic: 't2', publisherAgentId: null, payload: {}, publishedAt: 2 },
+    ]
+    const mockBb = {
+      listByWorkflow: (_id: string) => {
+        // Race: simulate a message arriving via the already-subscribed handler
+        // mid-history (id 'bb-2' is also in history → must be deduped).
+        for (const h of bbHandlers.values()) h({ id: 'bb-2', topic: 't2-dup' })
+        // And a brand-new one not in history.
+        for (const h of bbHandlers.values()) h({ id: 'bb-race', topic: 'tR' })
+        return historyRows
+      },
+      tail: (_id: string, handler: BbHandler) => {
+        const key = Symbol()
+        bbHandlers.set(key, handler)
+        return () => { bbHandlers.delete(key) }
+      },
+    }
+
+    const seenIds: string[] = []
+    const mockWs = {
+      data: { workflowInstanceId: wfId, stop: null as (() => void) | null },
+      send: (msg: string) => {
+        const parsed = JSON.parse(msg) as { type?: string; message?: { id: string } }
+        if (parsed.type === 'blackboard.message' && parsed.message) {
+          seenIds.push(parsed.message.id)
+        }
+      },
+    }
+
+    const ctx = { log: noopLog, blackboardStore: mockBb } as unknown as AppRuntime
+    wsHandlers(ctx).open(mockWs as never)
+
+    expect(seenIds).toEqual(['bb-1', 'bb-2', 'bb-race'])
 
     if (mockWs.data.stop) mockWs.data.stop()
   })
