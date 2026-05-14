@@ -45,7 +45,7 @@ describe('IMPLEMENTER_PROMPT (Phase 3 retry loop)', () => {
 
   test('describes the no-reviewer fallback so Phase 2 workflows still work', () => {
     const p = defaultSystemPromptFor('implementer')
-    expect(p).toContain('no reviewer is configured')
+    expect(p).toContain('Reviewer is not wired')
   })
 
   test('retains Phase 2 commit-required instructions', () => {

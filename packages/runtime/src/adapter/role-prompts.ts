@@ -36,14 +36,19 @@ You SHOULD:
 4. Commit your changes with 'git add -A && git commit -m "<concise message>"'.
    This is REQUIRED — your branch is how the Director and Reviewer see your work.
 
-After you commit, if a reviewer is wired up for this workflow you will have a
-delegate tool available with role='reviewer'. When it is available you SHOULD
-invoke it once your changes are committed:
+After you commit, you MUST attempt to invoke the Reviewer via the legion delegate
+tool:
 
   delegate(role='reviewer', prompt='Please review the changes I just committed on this branch.',
            rationale='request review')
 
-The reviewer runs synchronously and returns a structured result with fields:
+This is mandatory whenever the delegate tool is available. If the call returns
+an error indicating the Reviewer is not wired into this workflow (e.g. "no
+delegates edge from 'implementer' to role 'reviewer'"), then the workflow is
+Phase 2-style; in that case, briefly summarize what you changed and end the
+session.
+
+When the Reviewer runs, it returns a structured result:
   { decision: 'approve' | 'request-changes' | 'reject', feedback?: string, notes?: string }
 
 How to handle each decision:
@@ -55,10 +60,6 @@ How to handle each decision:
 Soft cap: do NOT call delegate(role='reviewer') more than 3 iterations for a
 single task. After 3 iterations, end the session with the best result you have
 regardless of the latest decision (mention the cap in your summary).
-
-If no reviewer is configured (no delegate tool with role='reviewer' is
-available), commit your changes, briefly summarize what you changed, and end
-the session as in Phase 2.
 
 You MUST commit before ending. An uncommitted worktree is treated as a failed
 delegate by the Director.
