@@ -11,8 +11,8 @@ import type {
   AgentCapabilities,
 } from '@legion/core'
 import { SessionStore } from './session-store'
-import { toAgentEvent } from './event-convert'
 import { launchSession, type QueryFn } from './provider/launch'
+import { streamSession } from './provider/stream'
 
 export type { QueryFn } from './provider/launch'
 
@@ -50,42 +50,8 @@ export class ClaudeCodeAgentSDKProvider implements AgentProvider {
     return { sessionId: s.sessionId }
   }
 
-  async *stream(sessionId: string): AsyncIterable<AgentEvent> {
-    const s = this.store.get(sessionId)
-    const sdkIter = s.iter[Symbol.asyncIterator]()
-    let sdkPromise = sdkIter.next()
-    let sdkDone = false
-
-    while (true) {
-      // Drain any queued injected events first
-      let injected: AgentEvent | undefined
-      while ((injected = s.injector.shift()) !== undefined) {
-        yield injected
-      }
-
-      if (sdkDone) return
-
-      // Wait for next SDK message OR next injection
-      const injectPromise = s.injector.wait().then(() => 'inject' as const)
-      const sdkP = sdkPromise.then((r) => ({ kind: 'sdk' as const, r }))
-      const winner = await Promise.race([sdkP, injectPromise])
-
-      if (winner === 'inject') {
-        // Loop back to drain queue
-        continue
-      }
-
-      const { r } = winner
-      if (r.done) {
-        sdkDone = true
-        // Loop once more to drain any final injected events
-        continue
-      }
-
-      sdkPromise = sdkIter.next()
-      const evt = toAgentEvent(sessionId, r.value)
-      if (evt) yield evt
-    }
+  stream(sessionId: string): AsyncIterable<AgentEvent> {
+    return streamSession(this.store, sessionId)
   }
 
   async send(_sessionId: string, _message: string, _opts?: SendOptions): Promise<void> {
