@@ -8,9 +8,24 @@ export interface InstanceSummary {
   endedAt: string | null
 }
 
+export interface AgentInstanceView {
+  id: string
+  roleNodeId: string
+  workflowInstanceId: string
+  sessionId: string
+  status: string
+  parentAgentInstanceId?: string
+  spawnEdgeId?: string
+  workspace: { kind: 'owned' | 'shared'; path: string }
+  branchName?: string
+  startedAt: string
+  endedAt: string | null
+}
+
 export interface InstanceDetail extends InstanceSummary {
   templateSnapshot: WorkflowTemplate
   events: AgentEvent[]
+  agentInstances: AgentInstanceView[]
 }
 
 export interface TemplateSummary {
