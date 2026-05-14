@@ -18,6 +18,12 @@ export async function makeScratchRepo(): Promise<ScratchRepo> {
   await $`git config user.email it@example.com`.cwd(path).quiet()
   await $`git config user.name "legion integration"`.cwd(path).quiet()
   await writeFile(join(path, 'README.md'), '# scratch\n\nplaceholder.\n')
+  // Pre-create src/ with placeholder files so Implementer agents do not need
+  // `mkdir` (which is not in the role-profile Bash whitelist and would block
+  // on a permission_request that no one can approve in tests).
+  await mkdir(join(path, 'src'), { recursive: true })
+  await writeFile(join(path, 'src', 'hello.ts'), 'export function hello(): string { return "hello" }\n')
+  await writeFile(join(path, 'src', 'math.ts'), '// placeholder for math helpers\n')
   await mkdir(join(path, 'workflows'), { recursive: true })
   await writeFile(
     join(path, 'workflows', 'bug-fix.yaml'),
