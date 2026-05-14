@@ -5,7 +5,7 @@ import { BlackboardStore } from '../../src/store/blackboard-store'
 
 function setupDb(): Database {
   const db = new Database(':memory:')
-  // workflow_instances が FK 参照を要求する場合のスタブ
+  // Stub for the workflow_instances FK target referenced by blackboard_messages.
   db.run(`CREATE TABLE workflow_instances (id TEXT PRIMARY KEY)`)
   return db
 }
