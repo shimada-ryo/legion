@@ -83,6 +83,23 @@ describe('streamCodexSession', () => {
     expect((end!.payload as { status: string; error: string }).error).toContain('boom')
   })
 
+  it('emits session_end with status=failed for top-level error event', async () => {
+    const events: ThreadEvent[] = [
+      { type: 'error', message: 'fatal failure' } as unknown as ThreadEvent,
+    ]
+    const { store, sessionId } = setupSession(events)
+
+    const out: any[] = []
+    for await (const ev of streamCodexSession(store, sessionId)) {
+      out.push(ev)
+    }
+
+    const end = out.find((e) => e.type === 'session_end')
+    expect(end).toBeDefined()
+    expect((end.payload as any).status).toBe('failed')
+    expect((end.payload as any).error).toContain('fatal failure')
+  })
+
   it('drops thread.started / turn.started / reasoning items (internal events)', async () => {
     const events: ThreadEvent[] = [
       { type: 'thread.started', thread_id: 't1' } as unknown as ThreadEvent,

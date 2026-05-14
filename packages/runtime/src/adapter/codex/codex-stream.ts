@@ -28,6 +28,7 @@ interface RawEvent {
   type: string
   item?: { type: string; text?: string; command?: string; tool?: string; arguments?: unknown }
   error?: { message?: string } | string
+  message?: string
   usage?: unknown
 }
 
@@ -48,16 +49,22 @@ function translateEvent(ev: RawEvent, sessionId: string): AgentEvent | undefined
           input: item.arguments ?? null,
         })
       }
-      // reasoning / file_change / web_search / todo_list are dropped in Phase 3
+      // Drop everything else: item.started / item.updated, plus item.completed items of
+      // type reasoning / file_change / web_search / todo_list. These are emitted by
+      // the SDK but not meaningful for Phase 3 reviewer flows.
       return undefined
     }
     case 'turn.completed':
       return makeEvent(sessionId, 'session_end', { status: 'completed', usage: ev.usage ?? null })
     case 'turn.failed':
-    case 'error':
       return makeEvent(sessionId, 'session_end', {
         status: 'failed',
         error: extractErrorMessage(ev.error),
+      })
+    case 'error':
+      return makeEvent(sessionId, 'session_end', {
+        status: 'failed',
+        error: ev.message ?? 'unknown',
       })
     default:
       return undefined
