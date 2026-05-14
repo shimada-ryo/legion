@@ -47,7 +47,9 @@ export function launchSession(req: LaunchRequest, query: QueryFn): LaunchedSessi
           ? { behavior: 'allow' as const, updatedInput: input }
           : { behavior: 'deny' as const, message: d.reason ?? 'denied' }
       },
-      ...(req.customTools !== undefined ? { tools: req.customTools } : {}),
+      ...(req.mcpServers !== undefined
+        ? { mcpServers: req.mcpServers as Record<string, import('@anthropic-ai/claude-agent-sdk').McpServerConfig> }
+        : {}),
       ...(req.model !== undefined ? { model: req.model } : {}),
       ...(req.env !== undefined ? { env: req.env } : {}),
     },

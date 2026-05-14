@@ -26,11 +26,13 @@ export interface LaunchRequest {
   model?: string
   env?: Record<string, string>
   /**
-   * D-037: Custom tools to inject into the spawned session (e.g. the Director's
-   * delegate tool). Treated as opaque here; the provider passes it through to
-   * its underlying SDK. Phase 2 only injects this for the Director session.
+   * D-037: In-process MCP server map. Keys are server names, values are
+   * `McpSdkServerConfigWithInstance` (or other McpServerConfig types) from
+   * `@anthropic-ai/claude-agent-sdk`. Treated as opaque here so this package
+   * stays free of an SDK dependency. The Claude Code provider forwards this
+   * straight to the SDK's `mcpServers` option.
    */
-  customTools?: unknown[]
+  mcpServers?: Record<string, unknown>
 }
 
 export interface SessionHandle {

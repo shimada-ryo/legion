@@ -1,5 +1,7 @@
 import { ulid } from 'ulid'
-import type { WorkflowTemplate, AgentProvider } from '@legion/core'
+import { z } from 'zod'
+import { tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk'
+import type { WorkflowTemplate, AgentProvider, DelegateToolInput } from '@legion/core'
 import type { EventLog } from '../eventlog/eventlog'
 import type { InstanceStore } from './instance-store'
 import { PENDING_SESSION_ID, type AgentInstanceStore } from '../store/agent-instance-store'
@@ -88,24 +90,26 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
     template: input.template,
     baseCommitSha,
   })
-  const customTools = [
+  const delegateTool = tool(
+    'delegate',
+    'Spawn an Implementer agent and wait for it to finish. Returns { agentInstanceId, branchName, status, summary }.',
     {
-      name: 'mcp__legion__delegate',
-      description:
-        'Spawn an Implementer agent and wait for it to finish. Returns { agentInstanceId, branchName, status, summary }.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          role: { type: 'string' },
-          prompt: { type: 'string' },
-          rationale: { type: 'string' },
-        },
-        required: ['role', 'prompt'],
-      },
-      handler: (toolInput: unknown) =>
-        delegateHandler.handle(toolInput as never),
+      role: z.string(),
+      prompt: z.string(),
+      rationale: z.string().optional(),
     },
-  ]
+    async (args) => {
+      const result = await delegateHandler.handle(args as DelegateToolInput)
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+      }
+    },
+  )
+
+  const legionMcpServer = createSdkMcpServer({
+    name: 'legion',
+    tools: [delegateTool],
+  })
 
   const handle = await input.adapter.launch({
     workdir: directorWs.path,
@@ -114,7 +118,7 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
       role: directorNode.role,
       userPrompt: input.userPrompt,
     }),
-    customTools,
+    mcpServers: { legion: legionMcpServer },
   })
 
   input.agentInstanceStore.updateSessionId(directorAgentInstanceId, handle.sessionId)
