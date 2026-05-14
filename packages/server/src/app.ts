@@ -11,6 +11,7 @@ import {
 } from '@legion/runtime/store/agent-instance-store'
 import { EventLog } from '@legion/runtime/eventlog/eventlog'
 import { LocalWorktreeProvider } from '@legion/runtime/workspace/local-worktree-provider'
+import { runOrphanRecovery } from './boot/orphan-recovery'
 import { route } from './http/routes'
 import { wsHandlers, type WsData } from './ws/event-stream'
 
@@ -43,6 +44,7 @@ export interface AppHandle {
 
 export async function startApp(opts: AppOptions): Promise<AppHandle> {
   initAgentInstanceSchema(opts.db)
+  runOrphanRecovery({ db: opts.db })
   const runtime: AppRuntime = {
     options: opts,
     store: new InstanceStore(opts.db),
