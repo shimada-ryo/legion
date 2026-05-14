@@ -1,0 +1,41 @@
+id: feature-with-review
+name: Feature with Reviewer (Phase 3)
+description: |
+  Director delegates to Implementer; Implementer commits and then requests a Reviewer
+  (Codex). Retry up to 3 times if the Reviewer requests changes. End on approve / reject
+  or after the soft cap.
+
+nodes:
+  - id: trigger
+    type: trigger
+    kind: manual
+
+  - id: director
+    type: role
+    role: director
+    provider: claude-code
+    lifetime: per-workflow
+
+  - id: implementer
+    type: role
+    role: implementer
+    provider: claude-code
+    lifetime: per-task
+
+  - id: reviewer
+    type: role
+    role: reviewer
+    provider: codex
+    lifetime: per-task
+
+  - id: review-results
+    type: blackboard
+    schema:
+      decision: string
+      feedback: string
+
+edges:
+  - { from: trigger,     to: director,        type: triggers }
+  - { from: director,    to: implementer,     type: delegates }
+  - { from: implementer, to: reviewer,        type: reviews }
+  - { from: reviewer,    to: review-results,  type: publishes }

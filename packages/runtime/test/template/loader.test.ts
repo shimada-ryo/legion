@@ -2,6 +2,7 @@ import { describe, test, expect } from 'bun:test'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { loadWorkflowTemplate } from '@legion/runtime/template/loader'
+import { validateTemplate } from '@legion/runtime/orchestrator/template-validate'
 
 const REPO_ROOT = resolve(import.meta.dir, '../../../..')
 
@@ -30,5 +31,18 @@ describe('loadWorkflowTemplate', () => {
       "id: t\nname: t\nnodes:\n  - {id: x, type: alien}\nedges: []\n",
     )
     await expect(loadWorkflowTemplate(tmp)).rejects.toThrow(/alien/)
+  })
+
+  test('feature-with-review.yaml loads and passes validateTemplate', async () => {
+    const t = await loadWorkflowTemplate(
+      join(REPO_ROOT, 'workflows', 'feature-with-review.yaml'),
+    )
+    expect(t.id).toBe('feature-with-review')
+    const roleIds = t.nodes.filter((n) => n.type === 'role').map((n) => n.id)
+    expect(roleIds).toEqual(['director', 'implementer', 'reviewer'])
+    expect(t.edges.some((e) => e.type === 'reviews')).toBe(true)
+
+    const result = validateTemplate(t, new Set(['claude-code', 'codex']))
+    expect(result.errors).toEqual([])
   })
 })
