@@ -4,12 +4,10 @@ import type { AgentInstanceView } from '../types'
 
 export interface EventLogPaneProps {
   events: AgentEvent[]
-  instanceId: string
   agentInstances?: AgentInstanceView[]
 }
 
-export default function EventLogPane({ events, instanceId, agentInstances = [] }: EventLogPaneProps) {
-  void instanceId
+export default function EventLogPane({ events, agentInstances = [] }: EventLogPaneProps) {
   const [filterSessionId, setFilterSessionId] = useState<string | null>(null)
 
   const labelForSession = useMemo(() => {

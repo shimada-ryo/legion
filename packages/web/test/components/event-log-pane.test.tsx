@@ -19,7 +19,7 @@ afterEach(() => cleanup())
 describe('EventLogPane agent filter', () => {
   test('renders all events by default', () => {
     const { container } = render(
-      <EventLogPane events={EVENTS} instanceId="wf" agentInstances={AGENTS} />,
+      <EventLogPane events={EVENTS} agentInstances={AGENTS} />,
     )
     expect(container.textContent).toContain('D')
     expect(container.textContent).toContain('I')
@@ -27,7 +27,7 @@ describe('EventLogPane agent filter', () => {
 
   test('clicking the Director filter hides Implementer events', () => {
     const { container, getByRole } = render(
-      <EventLogPane events={EVENTS} instanceId="wf" agentInstances={AGENTS} />,
+      <EventLogPane events={EVENTS} agentInstances={AGENTS} />,
     )
     fireEvent.click(getByRole('button', { name: /director/i }))
     expect(container.textContent).toContain('D')

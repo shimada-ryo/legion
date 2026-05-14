@@ -23,7 +23,7 @@ describe('CanvasOverlay status coloring', () => {
   test('renders a node for every template node', () => {
     const instances: AgentInstanceView[] = []
     const { container } = render(
-      <CanvasOverlay template={TEMPLATE} agentInstances={instances} events={[]} onSelectNode={() => {}} />,
+      <CanvasOverlay template={TEMPLATE} agentInstances={instances} onSelectNode={() => {}} />,
     )
     expect(container.querySelectorAll('[data-id="director"]').length).toBeGreaterThan(0)
     expect(container.querySelectorAll('[data-id="implementer"]').length).toBeGreaterThan(0)
@@ -38,7 +38,7 @@ describe('CanvasOverlay status coloring', () => {
       },
     ]
     const { container } = render(
-      <CanvasOverlay template={TEMPLATE} agentInstances={instances} events={[]} onSelectNode={() => {}} />,
+      <CanvasOverlay template={TEMPLATE} agentInstances={instances} onSelectNode={() => {}} />,
     )
     const node = container.querySelector('[data-id="director"]') as HTMLElement | null
     expect(node?.getAttribute('data-status') ?? node?.querySelector('[data-status]')?.getAttribute('data-status')).toBe('running')
@@ -53,7 +53,7 @@ describe('CanvasOverlay status coloring', () => {
       },
     ]
     const { container } = render(
-      <CanvasOverlay template={TEMPLATE} agentInstances={instances} events={[]} onSelectNode={() => {}} />,
+      <CanvasOverlay template={TEMPLATE} agentInstances={instances} onSelectNode={() => {}} />,
     )
     const node = container.querySelector('[data-id="implementer"]') as HTMLElement | null
     expect(node?.getAttribute('data-status') ?? node?.querySelector('[data-status]')?.getAttribute('data-status')).toBe('completed')

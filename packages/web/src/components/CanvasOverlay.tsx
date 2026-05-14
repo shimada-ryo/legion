@@ -10,14 +10,12 @@ import {
   type NodeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import type { WorkflowTemplate, AgentEvent, TemplateNode } from '@legion/core'
+import type { WorkflowTemplate, TemplateNode } from '@legion/core'
 import type { AgentInstanceView } from '../types'
 
 export interface CanvasOverlayProps {
   template: WorkflowTemplate
   agentInstances: AgentInstanceView[]
-  /** kept for compatibility with current Phase 1 callers; ignored by status logic */
-  events?: AgentEvent[]
   onSelectNode: (id: string | null) => void
 }
 

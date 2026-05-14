@@ -8,23 +8,29 @@ interface DiffEntry {
 
 export default function DiffTab({ instanceId }: { instanceId: string }) {
   const [items, setItems] = useState<DiffEntry[] | null>(null)
+  const [err, setErr] = useState<string | null>(null)
   const [open, setOpen] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     let alive = true
+    setErr(null)
     fetch(`/api/instances/${encodeURIComponent(instanceId)}/diff`)
-      .then((r) => r.json() as Promise<DiffEntry[]>)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json() as Promise<DiffEntry[]>
+      })
       .then((d) => {
         if (alive) setItems(d)
       })
-      .catch(() => {
-        if (alive) setItems([])
+      .catch((e) => {
+        if (alive) setErr(String(e))
       })
     return () => {
       alive = false
     }
   }, [instanceId])
 
+  if (err) return <div style={{ color: '#b00' }}>Error: {err}</div>
   if (!items) return <div>Loading…</div>
   if (items.length === 0) return <div>No agent diffs yet.</div>
   return (

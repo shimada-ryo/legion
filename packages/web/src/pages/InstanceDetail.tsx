@@ -27,7 +27,6 @@ export default function InstanceDetail() {
         <CanvasOverlay
           template={data.templateSnapshot}
           agentInstances={data.agentInstances}
-          events={events}
           onSelectNode={setSelectedNodeId}
         />
       </div>
@@ -41,7 +40,7 @@ export default function InstanceDetail() {
         />
       </div>
       <div className="event-log" style={eventLogStyle}>
-        <EventLogPane events={events} instanceId={data.id} agentInstances={data.agentInstances} />
+        <EventLogPane events={events} agentInstances={data.agentInstances} />
       </div>
     </div>
   )
