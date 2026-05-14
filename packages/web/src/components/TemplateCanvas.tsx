@@ -7,6 +7,7 @@ import {
   type Edge,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import '../styles/react-flow.css'
 import type { WorkflowTemplate } from '@legion/core'
 import { nodeStyleFor, edgeStyleFor } from './template-canvas/styling'
 import { layoutTemplate } from './template-canvas/layout'
