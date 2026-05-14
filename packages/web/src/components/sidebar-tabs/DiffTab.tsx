@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
 interface DiffEntry {
-  agentPath: string
-  branch: string | null
+  agentInstanceId: string
+  branch: string
   diff: string
 }
 
@@ -30,14 +30,16 @@ export default function DiffTab({ instanceId }: { instanceId: string }) {
   return (
     <div>
       {items.map((d) => (
-        <div key={d.agentPath} style={{ marginBottom: 12 }}>
+        <div key={d.agentInstanceId} style={{ marginBottom: 12 }}>
           <button
-            onClick={() => setOpen((o) => ({ ...o, [d.agentPath]: !o[d.agentPath] }))}
+            onClick={() =>
+              setOpen((o) => ({ ...o, [d.agentInstanceId]: !o[d.agentInstanceId] }))
+            }
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
-            {open[d.agentPath] ? '▼' : '▶'} {d.branch ?? '(detached)'}
+            {open[d.agentInstanceId] ? '▼' : '▶'} {d.branch}
           </button>
-          {open[d.agentPath] && (
+          {open[d.agentInstanceId] && (
             <pre
               style={{
                 fontSize: 11,
