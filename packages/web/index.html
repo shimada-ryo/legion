@@ -4,6 +4,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>legion</title>
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('legion.web.theme') || 'system';
+          var resolved = mode === 'system'
+            ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : mode;
+          document.documentElement.setAttribute('data-theme', resolved);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

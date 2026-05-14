@@ -9,14 +9,17 @@ import '@fontsource-variable/jetbrains-mono'
 import './styles.css'
 import './styles/tokens.css'
 
+import { ThemeProvider } from './theme/ThemeProvider'
 import App from './App'
 
 const root = document.getElementById('root')
 if (!root) throw new Error('#root not found')
 createRoot(root).render(
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </ThemeProvider>
   </StrictMode>,
 )
