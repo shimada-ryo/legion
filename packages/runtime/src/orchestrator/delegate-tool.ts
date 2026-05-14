@@ -46,25 +46,46 @@ export class DelegateToolHandler {
       )
     }
 
+    // For reviews edges, resolve reviewTargetBranch from caller's branchName.
+    let reviewTargetBranch: string | undefined
+    if (target.edgeType === 'reviews') {
+      const callerBranch = parentRow?.branchName ?? null
+      if (!callerBranch) {
+        throw new Error(
+          `delegate: caller agent instance has no branchName — cannot delegate reviews edge to role '${input.role}'`,
+        )
+      }
+      reviewTargetBranch = callerBranch
+    }
+
     const seq = this.nextSeqForRole(target.roleNodeId)
     const agentInstanceId = ulid()
 
-    // Create worktree via the existing WorkspaceProvider API. The provider
-    // derives the branch name internally; we read it back from the descriptor.
     const ws = await this.deps.workspaceProvider.create({
       workflowInstanceId: this.deps.workflowInstanceId,
       agentInstanceId,
       role: input.role,
       seq,
       baseCommitSha: this.deps.baseCommitSha,
+      ...(reviewTargetBranch !== undefined ? { reviewTargetBranch } : {}),
     })
-    const branchName =
-      ws.ref.kind === 'owned' && 'branch' in ws.ref ? ws.ref.branch ?? null : null
-    if (!branchName) {
-      throw new Error(
-        `delegate: workspace for role '${input.role}' must produce a branch (got --detach)`,
-      )
-    }
+
+    // Reviewer agents examine the caller's branch — they don't own a new branch.
+    // For delegates edges, the workspace creates a new branch we read back.
+    // Both paths guarantee a non-null string (throw otherwise).
+    const branchName: string = (() => {
+      if (target.edgeType === 'reviews') {
+        // reviewTargetBranch is always set here (we threw above if null)
+        return reviewTargetBranch as string
+      }
+      const b = ws.ref.kind === 'owned' && 'branch' in ws.ref ? ws.ref.branch ?? null : null
+      if (!b) {
+        throw new Error(
+          `delegate: workspace for role '${input.role}' must produce a branch (got --detach)`,
+        )
+      }
+      return b
+    })()
 
     this.deps.agentInstanceStore.insert({
       id: agentInstanceId,
