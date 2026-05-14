@@ -1,4 +1,4 @@
-// D-033: Default allowedTools profile per role. Workflow YAML can override via RoleNode.allowedTools.
+// D-033 / D-042 / D-037: Default profile per role. Workflow YAML may override.
 
 const READ_TOOLS = ['Read', 'Glob', 'Grep'] as const
 const EDIT_TOOLS = ['Read', 'Edit', 'Write', 'Glob', 'Grep'] as const
@@ -17,9 +17,18 @@ const IMPLEMENTER_BASH_WHITELIST = [
   'Bash(go test*)',
 ] as const
 
+const IMPLEMENTER_GIT_WHITELIST = [
+  'Bash(git add*)',
+  'Bash(git commit*)',
+  'Bash(git status*)',
+  'Bash(git diff*)',
+] as const
+
+const DIRECTOR_TOOLS = [...READ_TOOLS, 'mcp__legion__delegate'] as const
+
 const PROFILES: Record<string, readonly string[]> = {
-  director: READ_TOOLS,
-  implementer: [...EDIT_TOOLS, ...IMPLEMENTER_BASH_WHITELIST],
+  director: DIRECTOR_TOOLS,
+  implementer: [...EDIT_TOOLS, ...IMPLEMENTER_BASH_WHITELIST, ...IMPLEMENTER_GIT_WHITELIST],
   reviewer: READ_TOOLS,
 }
 

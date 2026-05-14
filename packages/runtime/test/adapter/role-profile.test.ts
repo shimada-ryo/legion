@@ -31,4 +31,22 @@ describe('defaultAllowedToolsFor', () => {
     const tools = defaultAllowedToolsFor('implementer')
     expect(tools.some((t) => t.startsWith('Bash('))).toBe(true)
   })
+
+  test('director profile includes the delegate tool', () => {
+    expect(defaultAllowedToolsFor('director')).toContain('mcp__legion__delegate')
+  })
+
+  test('implementer profile includes git commit-related bash whitelisted entries', () => {
+    const p = defaultAllowedToolsFor('implementer')
+    expect(p).toContain('Bash(git add*)')
+    expect(p).toContain('Bash(git commit*)')
+    expect(p).toContain('Bash(git status*)')
+    expect(p).toContain('Bash(git diff*)')
+  })
+
+  test('reviewer profile remains read-only (no delegate, no git)', () => {
+    const p = defaultAllowedToolsFor('reviewer')
+    expect(p).not.toContain('mcp__legion__delegate')
+    expect(p.some((t) => t.startsWith('Bash('))).toBe(false)
+  })
 })
