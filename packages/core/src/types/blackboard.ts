@@ -1,7 +1,26 @@
-// D-014, D-016: Blackboard is the unified substrate for cross-instance communication.
-// Local and remote variants share this interface; local-bus is an implementation optimization.
+// Phase 3 (D-049): Blackboard auto-publish + agent publish ツール用の message 型。
+// publishes エッジで宣言された topic (user-defined) と runtime auto-publish (system.*) の両方を表す。
+//
+// D-014, D-016: Channel-based pub/sub contract (BlackboardChannelMessage / Blackboard).
+// BlackboardMessage<T> was renamed to BlackboardChannelMessage<T> in Phase 3 to avoid
+// conflict with the new topic-based BlackboardMessage introduced by D-049.
 
-export interface BlackboardMessage<T = unknown> {
+export interface BlackboardMessage {
+  /** ULID. */
+  id: string
+  /** 関連付けされた workflow instance。 */
+  workflowInstanceId: string
+  /** topic 名。system 系は 'system.' プレフィックス (system.delegate.start, system.delegate.result, system.review.decision)、ユーザー定義は任意文字列。 */
+  topic: string
+  /** publish した agent_instance.id。runtime auto-publish の場合 null。 */
+  publisherAgentId: string | null
+  /** JSON.parse 可能な任意の payload。 */
+  payload: unknown
+  /** UNIX epoch milliseconds。 */
+  publishedAt: number
+}
+
+export interface BlackboardChannelMessage<T = unknown> {
   id: string
   channelId: string
   publisherAgentInstanceId: string
@@ -24,7 +43,7 @@ export interface Blackboard {
     workflowInstanceId: string,
     publisherAgentInstanceId: string,
     payload: T,
-  ): Promise<BlackboardMessage<T>>
+  ): Promise<BlackboardChannelMessage<T>>
 
   subscribe(
     channelId: string,
@@ -38,7 +57,7 @@ export interface Blackboard {
     subscriptionId: string,
     afterMessageId?: string,
     limit?: number,
-  ): Promise<BlackboardMessage[]>
+  ): Promise<BlackboardChannelMessage[]>
 
-  stream(subscriptionId: string): AsyncIterable<BlackboardMessage>
+  stream(subscriptionId: string): AsyncIterable<BlackboardChannelMessage>
 }

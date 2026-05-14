@@ -33,6 +33,8 @@ export interface LaunchRequest {
    * straight to the SDK's `mcpServers` option.
    */
   mcpServers?: Record<string, unknown>
+  /** Phase 3: provider が structured output をサポートする場合に渡す JSON Schema。 */
+  outputSchema?: unknown
 }
 
 export interface SessionHandle {
