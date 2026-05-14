@@ -15,7 +15,9 @@ const args = process.argv.slice(2)
 const portIdx = args.indexOf('--port')
 const port =
   portIdx >= 0 && portIdx + 1 < args.length ? parseInt(args[portIdx + 1]!, 10) : 5500
-const repoPath = process.cwd()
+const repoIdx = args.indexOf('--repo')
+const repoPath =
+  repoIdx >= 0 && repoIdx + 1 < args.length ? args[repoIdx + 1]! : process.cwd()
 
 await preflight(repoPath)
 
