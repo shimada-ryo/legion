@@ -116,6 +116,10 @@ export class AgentInstanceStore {
     this.db.run(`UPDATE agent_instances SET status = ? WHERE id = ?`, [status, id])
   }
 
+  updateSessionId(id: string, sessionId: string): void {
+    this.db.run(`UPDATE agent_instances SET session_id = ? WHERE id = ?`, [sessionId, id])
+  }
+
   setEndedAt(id: string, endedAt: Date): void {
     this.db.run(`UPDATE agent_instances SET ended_at_iso = ? WHERE id = ?`, [
       endedAt.toISOString(),

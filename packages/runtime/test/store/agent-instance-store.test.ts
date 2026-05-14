@@ -87,4 +87,12 @@ describe('AgentInstanceStore', () => {
     expect(store.byId(row().id)?.endedAt?.toISOString()).toBe(t.toISOString())
     db.close()
   })
+
+  test('updateSessionId persists', () => {
+    const { db, store } = freshStore()
+    store.insert(row({ sessionId: 'placeholder' }))
+    store.updateSessionId(row().id, 'real-session-id')
+    expect(store.bySessionId('real-session-id')?.id).toBe(row().id)
+    db.close()
+  })
 })
