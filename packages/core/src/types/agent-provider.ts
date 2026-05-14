@@ -65,6 +65,9 @@ export type AgentEventType =
   | 'status_change'
   | 'message'
   | 'error'
+  // Codex provider events (Phase 3)
+  | 'assistant_message'
+  | 'session_end'
 
 export interface AgentEvent {
   id: string
