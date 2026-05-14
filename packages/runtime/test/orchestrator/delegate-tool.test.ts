@@ -6,7 +6,7 @@ import {
   initAgentInstanceSchema,
 } from '@legion/runtime/store/agent-instance-store'
 import { initInstanceSchema } from '@legion/runtime/orchestrator/instance-store'
-import { DelegateToolHandler } from '@legion/runtime/orchestrator/delegate-tool'
+import { DelegateToolHandler, DELEGATE_TOPICS } from '@legion/runtime/orchestrator/delegate-tool'
 import { BlackboardStore } from '@legion/runtime/store/blackboard-store'
 import type { AgentEvent, WorkflowTemplate } from '@legion/core'
 import type {
@@ -137,16 +137,14 @@ function makeMocks() {
     endedAt: null,
   })
 
-  const events: AgentEvent[] = []
-  const eventLog = { write: (e: AgentEvent) => events.push(e) }
-
+  const eventLog = stubEventLog()
   const workspaceProvider = createMockWorkspaceProvider()
   const provider = createMockProvider()
 
   const blackboard = new BlackboardStore(db)
   blackboard.initSchema()
 
-  return { db, store, eventLog, workspaceProvider, provider, events, blackboard }
+  return { db, store, eventLog, workspaceProvider, provider, blackboard }
 }
 
 // Template nodes for makeMocks() use provider='claude-code', so singleProviderMap is appropriate.
@@ -483,11 +481,11 @@ describe('DelegateToolHandler', () => {
 
     const msgs = blackboard.listByWorkflow('wf-1')
     const topics = msgs.map((m) => m.topic)
-    expect(topics).toContain('system.delegate.start')
-    expect(topics).toContain('system.delegate.result')
-    expect(topics).toContain('system.review.decision')
+    expect(topics).toContain(DELEGATE_TOPICS.START)
+    expect(topics).toContain(DELEGATE_TOPICS.RESULT)
+    expect(topics).toContain(DELEGATE_TOPICS.REVIEW_DECISION)
 
-    const decisionMsg = msgs.find((m) => m.topic === 'system.review.decision')
+    const decisionMsg = msgs.find((m) => m.topic === DELEGATE_TOPICS.REVIEW_DECISION)
     expect((decisionMsg!.payload as any).decision).toBe('approve')
 
     db.close()
@@ -499,9 +497,9 @@ describe('DelegateToolHandler', () => {
 
     const msgs = m.blackboard.listByWorkflow('wf-01')
     const topics = msgs.map((msg) => msg.topic)
-    expect(topics).toContain('system.delegate.start')
-    expect(topics).toContain('system.delegate.result')
-    expect(topics).not.toContain('system.review.decision')
+    expect(topics).toContain(DELEGATE_TOPICS.START)
+    expect(topics).toContain(DELEGATE_TOPICS.RESULT)
+    expect(topics).not.toContain(DELEGATE_TOPICS.REVIEW_DECISION)
 
     m.db.close()
   })

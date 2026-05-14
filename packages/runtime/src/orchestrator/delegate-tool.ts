@@ -80,7 +80,21 @@ export interface DelegateToolDeps {
 }
 
 const SUMMARY_MAX = 500
-const PROMPT_PREVIEW_MAX = 200
+const EVENT_PAYLOAD_PREVIEW_MAX = 200
+
+export const DELEGATE_TOPICS = {
+  START: 'system.delegate.start',
+  RESULT: 'system.delegate.result',
+  REVIEW_DECISION: 'system.review.decision',
+} as const
+
+interface SpawnInputs {
+  agentInstanceId: string
+  branchName: string
+  workspacePath: string
+  edgeType: 'delegates' | 'reviews'
+  provider: AgentProvider
+}
 
 export class DelegateToolHandler {
   constructor(private readonly deps: DelegateToolDeps) {}
@@ -89,12 +103,12 @@ export class DelegateToolHandler {
     const { agentInstanceId, branchName, workspacePath, edgeType, provider } =
       await this.resolveSpawnInputs(input)
 
-    this.publishSystemEvent('system.delegate.start', {
+    this.publishSystemEvent(DELEGATE_TOPICS.START, {
       fromAgentInstanceId: this.deps.parentAgentInstanceId,
       toAgentInstanceId: agentInstanceId,
       role: input.role,
       edgeType,
-      prompt: input.prompt.slice(0, PROMPT_PREVIEW_MAX),
+      prompt: input.prompt.slice(0, EVENT_PAYLOAD_PREVIEW_MAX),
     })
 
     const outputSchema = edgeType === 'reviews' ? REVIEW_OUTPUT_SCHEMA : undefined
@@ -106,17 +120,17 @@ export class DelegateToolHandler {
       outputSchema,
     )
 
-    this.publishSystemEvent('system.delegate.result', {
+    this.publishSystemEvent(DELEGATE_TOPICS.RESULT, {
       agentInstanceId,
       role: input.role,
       status,
-      summary: summary.slice(0, PROMPT_PREVIEW_MAX),
+      summary: summary.slice(0, EVENT_PAYLOAD_PREVIEW_MAX),
     })
 
     if (edgeType === 'reviews') {
       const parsed = parseReviewerOutput(summary)
       if (parsed.payload !== undefined) {
-        this.publishSystemEvent('system.review.decision', {
+        this.publishSystemEvent(DELEGATE_TOPICS.REVIEW_DECISION, {
           agentInstanceId,
           decision: parsed.payload.decision,
           feedback: parsed.payload.feedback,
@@ -169,9 +183,7 @@ export class DelegateToolHandler {
     return provider
   }
 
-  private async resolveSpawnInputs(
-    input: DelegateToolInput,
-  ): Promise<{ agentInstanceId: string; branchName: string; workspacePath: string; edgeType: string; provider: AgentProvider }> {
+  private async resolveSpawnInputs(input: DelegateToolInput): Promise<SpawnInputs> {
     const parentRow = this.deps.agentInstanceStore.byId(this.deps.parentAgentInstanceId)
     const fromRoleNodeId = parentRow?.roleNodeId ?? 'director'
 
@@ -254,6 +266,7 @@ export class DelegateToolHandler {
     let summary = ''
     let status: 'completed' | 'failed' = 'completed'
     let error: string | undefined
+    let sessionId: string | undefined
 
     try {
       const handle = await provider.launch({
@@ -262,6 +275,7 @@ export class DelegateToolHandler {
         initialPrompt: `${defaultSystemPromptFor(input.role)}\n\nTask: ${input.prompt}`,
         ...(outputSchema !== undefined ? { outputSchema } : {}),
       })
+      sessionId = handle.sessionId
       this.deps.agentInstanceStore.updateSessionId(agentInstanceId, handle.sessionId)
       this.deps.agentInstanceStore.updateStatus(agentInstanceId, 'running')
 
@@ -276,6 +290,11 @@ export class DelegateToolHandler {
       status = 'failed'
       error = e instanceof Error ? e.message : String(e)
     } finally {
+      if (sessionId !== undefined) {
+        // Release provider-side session state (matters for Codex's CodexSessionStore;
+        // no-op for Claude). Errors here must not override the spawned agent's status.
+        try { await provider.shutdown(sessionId) } catch { /* swallow */ }
+      }
       this.deps.agentInstanceStore.setEndedAt(agentInstanceId, new Date())
       this.deps.agentInstanceStore.updateStatus(
         agentInstanceId,

@@ -52,22 +52,14 @@ export class BlackboardStore {
     if (topic) {
       const rows = this.db
         .query<DbRow, [string, string, number]>(
-          `SELECT id, workflow_instance_id, topic, publisher_agent_id, payload, published_at
-           FROM blackboard_messages
-           WHERE workflow_instance_id = ? AND topic = ?
-           ORDER BY published_at ASC
-           LIMIT ?`,
+          `${SELECT_COLS} WHERE workflow_instance_id = ? AND topic = ? ORDER BY published_at ASC LIMIT ?`,
         )
         .all(workflowInstanceId, topic, limit)
       return rows.map(toMessage)
     }
     const rows = this.db
       .query<DbRow, [string, number]>(
-        `SELECT id, workflow_instance_id, topic, publisher_agent_id, payload, published_at
-         FROM blackboard_messages
-         WHERE workflow_instance_id = ?
-         ORDER BY published_at ASC
-         LIMIT ?`,
+        `${SELECT_COLS} WHERE workflow_instance_id = ? ORDER BY published_at ASC LIMIT ?`,
       )
       .all(workflowInstanceId, limit)
     return rows.map(toMessage)
@@ -75,14 +67,14 @@ export class BlackboardStore {
 
   byId(id: string): BlackboardMessage | undefined {
     const row = this.db
-      .query<DbRow, [string]>(
-        `SELECT id, workflow_instance_id, topic, publisher_agent_id, payload, published_at
-         FROM blackboard_messages WHERE id = ?`,
-      )
+      .query<DbRow, [string]>(`${SELECT_COLS} WHERE id = ?`)
       .get(id)
     return row ? toMessage(row) : undefined
   }
 }
+
+const SELECT_COLS =
+  `SELECT id, workflow_instance_id, topic, publisher_agent_id, payload, published_at FROM blackboard_messages`
 
 function toMessage(r: DbRow): BlackboardMessage {
   return {
