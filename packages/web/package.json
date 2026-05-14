@@ -10,6 +10,9 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@fontsource-variable/murecho": "^5.2.9",
     "@legion/core": "workspace:*",
     "@xyflow/react": "^12.10.2",
     "react": "^19.2.6",

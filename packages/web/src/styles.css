@@ -1,5 +1,17 @@
-:root { font-family: system-ui, sans-serif; }
 * { box-sizing: border-box; }
-body, html, #root { height: 100%; margin: 0; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  font-family: var(--font-base);
+  color: var(--fg-primary);
+  background-color: var(--bg-canvas);
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none; }
+}
+
 .app { display: flex; flex-direction: column; height: 100%; }
 .main { flex: 1; overflow: hidden; }
