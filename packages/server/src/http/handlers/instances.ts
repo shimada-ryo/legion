@@ -1,5 +1,6 @@
 import type { AppRuntime } from '../../app'
 import { triggerWorkflow } from '@legion/runtime/orchestrator/trigger'
+import { resolveTriggerTargets } from '@legion/runtime/orchestrator/graph-walker'
 
 export async function handleWorkflowsTrigger(
   req: Request,
@@ -16,20 +17,24 @@ export async function handleWorkflowsTrigger(
   if (!templateId) return new Response('templateId required', { status: 400 })
   const template = ctx.options.templates.get(templateId)
   if (!template) return new Response('Unknown template', { status: 404 })
-  const adapter = ctx.options.adapterFactory()
   const { workflowInstanceId } = await triggerWorkflow({
     template,
     userPrompt,
     repoPath: ctx.options.repoPath,
     baseRef: body.baseRef ?? 'HEAD',
     workspaceProvider: ctx.worktree,
-    adapter,
+    providersByName: ctx.providersByName,
     instanceStore: ctx.store,
     agentInstanceStore: ctx.agentInstanceStore,
     eventLog: ctx.log,
     blackboardStore: ctx.blackboardStore,
   })
-  ctx.adapters.set(workflowInstanceId, adapter)
+  // Keep the per-workflow provider reference for approval flow routing.
+  const directorNode = resolveTriggerTargets(template)[0]
+  const directorProvider = directorNode
+    ? ctx.providersByName.get(directorNode.provider)
+    : undefined
+  if (directorProvider) ctx.adapters.set(workflowInstanceId, directorProvider)
   return Response.json({ workflowInstanceId }, { status: 202 })
 }
 

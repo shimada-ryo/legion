@@ -70,7 +70,7 @@ describe.skipIf(!HAS_AUTH)('Phase 2 delegate flow (real SDK)', () => {
           repoPath: repo.path,
           baseRef: 'HEAD',
           workspaceProvider: worktree,
-          adapter,
+          providersByName: new Map([['claude-code', adapter]]),
           instanceStore: store,
           agentInstanceStore: agentStore,
           eventLog: log,

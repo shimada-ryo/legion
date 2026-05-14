@@ -20,7 +20,7 @@ export interface TriggerInput {
   repoPath: string
   baseRef: string
   workspaceProvider: WorkspaceProvider
-  adapter: AgentProvider
+  providersByName: Map<string, AgentProvider>
   instanceStore: InstanceStore
   agentInstanceStore: AgentInstanceStore
   eventLog: EventLog
@@ -38,6 +38,12 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
     throw new Error(`template ${input.template.id} has no triggers→role edge`)
   }
   const directorNode = triggerTargets[0]!
+  const directorProvider = input.providersByName.get(directorNode.provider)
+  if (!directorProvider) {
+    throw new Error(
+      `provider '${directorNode.provider}' not registered (template ${input.template.id})`,
+    )
+  }
 
   const baseCommitSha = await resolveCommitSha(input.repoPath, input.baseRef)
   const instance = input.instanceStore.create({
@@ -82,13 +88,12 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
     config,
   })
 
-  // TODO(a02 Task 7): receive providersByName from ctx instead of building a single-entry Map.
   const delegateHandler = new DelegateToolHandler({
     workflowInstanceId: instance.id,
     parentAgentInstanceId: directorAgentInstanceId,
     agentInstanceStore: input.agentInstanceStore,
     workspaceProvider: input.workspaceProvider,
-    providers: new Map([['claude-code', input.adapter]]),
+    providers: input.providersByName,
     eventLog: { write: (evt) => input.eventLog.append(instance.id, evt) },
     template: input.template,
     baseCommitSha,
@@ -115,7 +120,7 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
     tools: [delegateTool],
   })
 
-  const handle = await input.adapter.launch({
+  const handle = await directorProvider.launch({
     workdir: directorWs.path,
     role: directorNode.role,
     initialPrompt: buildInitialPrompt({
@@ -129,18 +134,19 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
   input.agentInstanceStore.updateStatus(directorAgentInstanceId, 'running')
 
   // Drain the stream in the background; events flow into the event log.
-  void drainStream(input, instance.id, directorAgentInstanceId, handle.sessionId)
+  void drainStream(input, directorProvider, instance.id, directorAgentInstanceId, handle.sessionId)
   return { workflowInstanceId: instance.id, sessionId: handle.sessionId }
 }
 
 async function drainStream(
   input: TriggerInput,
+  provider: AgentProvider,
   workflowInstanceId: string,
   directorAgentInstanceId: string,
   sessionId: string,
 ): Promise<void> {
   try {
-    for await (const evt of input.adapter.stream(sessionId)) {
+    for await (const evt of provider.stream(sessionId)) {
       input.eventLog.append(workflowInstanceId, evt)
       if (evt.type === 'status_change') {
         const status = (evt.payload as { status?: string }).status

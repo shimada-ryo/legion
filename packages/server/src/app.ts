@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import type { Server } from 'bun'
 import type { Database } from 'bun:sqlite'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,6 +15,7 @@ import {
 import { BlackboardStore } from '@legion/runtime/store/blackboard-store'
 import { EventLog } from '@legion/runtime/eventlog/eventlog'
 import { LocalWorktreeProvider } from '@legion/runtime/workspace/local-worktree-provider'
+import { CodexSdkProvider } from '@legion/runtime/adapter/codex/codex-provider'
 import { runOrphanRecovery } from './boot/orphan-recovery'
 import { route } from './http/routes'
 import { wsHandlers, type WsData } from './ws/event-stream'
@@ -34,6 +38,8 @@ export interface AppRuntime {
   worktree: LocalWorktreeProvider
   /** workflowInstanceId → provider (one provider instance per workflow; sessions live in agentInstanceStore). */
   adapters: Map<string, AgentProvider>
+  /** All registered providers keyed by their id. */
+  providersByName: Map<string, AgentProvider>
   /** approvalId → sessionId, populated when permission_request events flow through. */
   approvalIdToSessionId: Map<string, string>
 }
@@ -42,6 +48,28 @@ export interface AppHandle {
   port: number
   runtime: AppRuntime
   stop(): Promise<void>
+}
+
+function buildProviders(opts: AppOptions): Map<string, AgentProvider> {
+  const claudeProvider = opts.adapterFactory()
+  const codexProvider = new CodexSdkProvider()
+
+  const codexAuthPath = join(homedir(), '.codex', 'auth.json')
+  const hasChatgptOauth = existsSync(codexAuthPath)
+  const hasCodexApiKey = Boolean(process.env['CODEX_API_KEY'])
+  if (!hasChatgptOauth && !hasCodexApiKey) {
+    console.warn(
+      '[legion] codex provider is registered but no ChatGPT OAuth (~/.codex/auth.json) ' +
+        'or CODEX_API_KEY found.\n' +
+        '  Run `codex login` or set CODEX_API_KEY before triggering workflows that use codex.\n' +
+        '  DO NOT set OPENAI_API_KEY alongside ChatGPT OAuth — it may be ignored (openai/codex#3286).',
+    )
+  }
+
+  const map = new Map<string, AgentProvider>()
+  map.set(claudeProvider.id, claudeProvider)
+  map.set(codexProvider.id, codexProvider)
+  return map
 }
 
 export async function startApp(opts: AppOptions): Promise<AppHandle> {
@@ -60,6 +88,7 @@ export async function startApp(opts: AppOptions): Promise<AppHandle> {
       baseDir: opts.worktreeBaseDir,
     }),
     adapters: new Map(),
+    providersByName: buildProviders(opts),
     approvalIdToSessionId: new Map(),
   }
   runtime.log.onAny((evt) => {

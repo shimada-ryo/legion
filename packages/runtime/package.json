@@ -32,7 +32,8 @@
     "./orchestrator/template-validate": "./src/orchestrator/template-validate.ts",
     "./orchestrator/delegate-tool": "./src/orchestrator/delegate-tool.ts",
     "./store/agent-instance-store": "./src/store/agent-instance-store.ts",
-    "./store/blackboard-store": "./src/store/blackboard-store.ts"
+    "./store/blackboard-store": "./src/store/blackboard-store.ts",
+    "./adapter/codex/codex-provider": "./src/adapter/codex/codex-provider.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.140",
