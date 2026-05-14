@@ -72,7 +72,7 @@ export interface DelegateToolDeps {
   parentAgentInstanceId: string
   agentInstanceStore: AgentInstanceStore
   workspaceProvider: WorkspaceProvider
-  provider: AgentProvider
+  providers: Map<string, AgentProvider>
   eventLog: EventLogWriter
   template: WorkflowTemplate
   baseCommitSha: string
@@ -86,7 +86,7 @@ export class DelegateToolHandler {
   constructor(private readonly deps: DelegateToolDeps) {}
 
   async handle(input: DelegateToolInput): Promise<DelegateToolOutput> {
-    const { agentInstanceId, branchName, workspacePath, edgeType } =
+    const { agentInstanceId, branchName, workspacePath, edgeType, provider } =
       await this.resolveSpawnInputs(input)
 
     this.publishSystemEvent('system.delegate.start', {
@@ -102,6 +102,7 @@ export class DelegateToolHandler {
       agentInstanceId,
       input,
       workspacePath,
+      provider,
       outputSchema,
     )
 
@@ -152,9 +153,25 @@ export class DelegateToolHandler {
     })
   }
 
+  private resolveProvider(roleNodeId: string): AgentProvider {
+    const targetNode = this.deps.template.nodes.find((n) => n.id === roleNodeId)
+    if (!targetNode || targetNode.type !== 'role') {
+      throw new Error(`delegate: target node '${roleNodeId}' is not a role node`)
+    }
+    const providerName = targetNode.provider
+    const provider = this.deps.providers.get(providerName)
+    if (!provider) {
+      const registered = [...this.deps.providers.keys()].join(', ')
+      throw new Error(
+        `delegate: provider '${providerName}' is not registered (registered: ${registered})`,
+      )
+    }
+    return provider
+  }
+
   private async resolveSpawnInputs(
     input: DelegateToolInput,
-  ): Promise<{ agentInstanceId: string; branchName: string; workspacePath: string; edgeType: string }> {
+  ): Promise<{ agentInstanceId: string; branchName: string; workspacePath: string; edgeType: string; provider: AgentProvider }> {
     const parentRow = this.deps.agentInstanceStore.byId(this.deps.parentAgentInstanceId)
     const fromRoleNodeId = parentRow?.roleNodeId ?? 'director'
 
@@ -165,6 +182,8 @@ export class DelegateToolHandler {
         `delegate: no delegates edge from '${fromRoleNodeId}' to role '${input.role}' in template`,
       )
     }
+
+    const provider = this.resolveProvider(target.roleNodeId)
 
     // For reviews edges, resolve reviewTargetBranch from caller's branchName.
     let reviewTargetBranch: string | undefined
@@ -222,13 +241,14 @@ export class DelegateToolHandler {
       endedAt: null,
     })
 
-    return { agentInstanceId, branchName, workspacePath: ws.path, edgeType: target.edgeType }
+    return { agentInstanceId, branchName, workspacePath: ws.path, edgeType: target.edgeType, provider }
   }
 
   private async runSpawnedAgent(
     agentInstanceId: string,
     input: DelegateToolInput,
     workspacePath: string,
+    provider: AgentProvider,
     outputSchema?: unknown,
   ): Promise<{ summary: string; status: 'completed' | 'failed'; error?: string }> {
     let summary = ''
@@ -236,7 +256,7 @@ export class DelegateToolHandler {
     let error: string | undefined
 
     try {
-      const handle = await this.deps.provider.launch({
+      const handle = await provider.launch({
         workdir: workspacePath,
         role: input.role,
         initialPrompt: `${defaultSystemPromptFor(input.role)}\n\nTask: ${input.prompt}`,
@@ -245,7 +265,7 @@ export class DelegateToolHandler {
       this.deps.agentInstanceStore.updateSessionId(agentInstanceId, handle.sessionId)
       this.deps.agentInstanceStore.updateStatus(agentInstanceId, 'running')
 
-      for await (const evt of this.deps.provider.stream(handle.sessionId)) {
+      for await (const evt of provider.stream(handle.sessionId)) {
         this.deps.eventLog.write(evt)
         if (evt.type === 'message') {
           const t = (evt.payload as { text?: string }).text

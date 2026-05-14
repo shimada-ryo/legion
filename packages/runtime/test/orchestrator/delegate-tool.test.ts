@@ -103,6 +103,11 @@ function stubEventLog() {
   return { write: (e: AgentEvent) => events.push(e) }
 }
 
+/** Wrap a single provider in a Map under the given name (default 'claude-code'). */
+function singleProviderMap(p: unknown, name = 'claude-code'): Map<string, unknown> {
+  return new Map([[name, p]])
+}
+
 /** Create and init a BlackboardStore backed by an existing in-memory db. */
 function makeBlackboard(db: InstanceType<typeof Database>): BlackboardStore {
   const store = new BlackboardStore(db)
@@ -144,13 +149,15 @@ function makeMocks() {
   return { db, store, eventLog, workspaceProvider, provider, events, blackboard }
 }
 
+// Template nodes for makeMocks() use provider='claude-code', so singleProviderMap is appropriate.
+
 function makeHandler(m: ReturnType<typeof makeMocks>) {
   return new DelegateToolHandler({
     workflowInstanceId: 'wf-01',
     parentAgentInstanceId: 'dir-01',
     agentInstanceStore: m.store,
     workspaceProvider: m.workspaceProvider,
-    provider: m.provider as never,
+    providers: singleProviderMap(m.provider) as never,
     eventLog: m.eventLog as never,
     template: TEMPLATE,
     baseCommitSha: 'abc',
@@ -240,7 +247,7 @@ describe('DelegateToolHandler', () => {
       parentAgentInstanceId: implId,
       agentInstanceStore,
       workspaceProvider,
-      provider: createMockProvider({ summary: 'reviewed' }) as never,
+      providers: singleProviderMap(createMockProvider({ summary: 'reviewed' }), 'codex') as never,
       eventLog: stubEventLog() as never,
       template: templateWithReviewsEdge(),
       baseCommitSha: 'base-sha',
@@ -286,7 +293,7 @@ describe('DelegateToolHandler', () => {
       parentAgentInstanceId: implId,
       agentInstanceStore,
       workspaceProvider,
-      provider: createMockProvider() as never,
+      providers: singleProviderMap(createMockProvider(), 'codex') as never,
       eventLog: stubEventLog() as never,
       template: templateWithReviewsEdge(),
       baseCommitSha: 'base-sha',
@@ -328,7 +335,7 @@ describe('DelegateToolHandler', () => {
       parentAgentInstanceId: implId,
       agentInstanceStore,
       workspaceProvider: createMockWorkspaceProvider(),
-      provider: provider as never,
+      providers: singleProviderMap(provider, 'codex') as never,
       eventLog: stubEventLog() as never,
       template: templateWithReviewsEdge(),
       baseCommitSha: 'base-sha',
@@ -374,7 +381,7 @@ describe('DelegateToolHandler', () => {
       parentAgentInstanceId: implId,
       agentInstanceStore,
       workspaceProvider: createMockWorkspaceProvider(),
-      provider: provider as never,
+      providers: singleProviderMap(provider, 'codex') as never,
       eventLog: stubEventLog() as never,
       template: templateWithReviewsEdge(),
       baseCommitSha: 'base-sha',
@@ -418,7 +425,7 @@ describe('DelegateToolHandler', () => {
       parentAgentInstanceId: implId,
       agentInstanceStore,
       workspaceProvider: createMockWorkspaceProvider(),
-      provider: provider as never,
+      providers: singleProviderMap(provider, 'codex') as never,
       eventLog: stubEventLog() as never,
       template: templateWithReviewsEdge(),
       baseCommitSha: 'base-sha',
@@ -465,7 +472,7 @@ describe('DelegateToolHandler', () => {
       parentAgentInstanceId: implId,
       agentInstanceStore,
       workspaceProvider: createMockWorkspaceProvider(),
-      provider: provider as never,
+      providers: singleProviderMap(provider, 'codex') as never,
       eventLog: stubEventLog() as never,
       template: templateWithReviewsEdge(),
       baseCommitSha: 'base-sha',
@@ -497,5 +504,171 @@ describe('DelegateToolHandler', () => {
     expect(topics).not.toContain('system.review.decision')
 
     m.db.close()
+  })
+
+  // Provider selection tests — Task 6 (a02)
+
+  test('selects provider from providers Map by target node provider field (claude-code for implementer)', async () => {
+    const db = new Database(':memory:')
+    initInstanceSchema(db)
+    initAgentInstanceSchema(db)
+    const agentInstanceStore = new AgentInstanceStore(db)
+    const blackboard = makeBlackboard(db)
+
+    agentInstanceStore.insert({
+      id: 'dir-01',
+      workflowInstanceId: 'wf-01',
+      roleNodeId: 'director',
+      sessionId: 'dir-sess',
+      parentAgentInstanceId: null,
+      spawnEdgeId: null,
+      status: 'running',
+      workspaceKind: 'owned',
+      workspacePath: '/tmp/wt/director',
+      branchName: null,
+      startedAt: new Date(),
+      endedAt: null,
+    })
+
+    const claudeStub = createCapturingProvider({ summary: 'claude did it' })
+    const codexStub = createCapturingProvider({ summary: 'codex did it' })
+    const providers = new Map([
+      ['claude-code', claudeStub as never],
+      ['codex', codexStub as never],
+    ])
+
+    const handler = new DelegateToolHandler({
+      workflowInstanceId: 'wf-01',
+      parentAgentInstanceId: 'dir-01',
+      agentInstanceStore,
+      workspaceProvider: createMockWorkspaceProvider(),
+      providers,
+      eventLog: stubEventLog() as never,
+      template: TEMPLATE,  // implementer.provider='claude-code'
+      baseCommitSha: 'abc',
+      blackboardStore: blackboard,
+    })
+
+    await handler.handle({ role: 'implementer', prompt: 'build it' })
+
+    expect(claudeStub.lastLaunchRequest).toBeDefined()
+    expect(codexStub.lastLaunchRequest).toBeUndefined()
+
+    db.close()
+  })
+
+  test('selects codex provider for reviewer target', async () => {
+    const db = new Database(':memory:')
+    initInstanceSchema(db)
+    initAgentInstanceSchema(db)
+    const agentInstanceStore = new AgentInstanceStore(db)
+    const blackboard = makeBlackboard(db)
+
+    const implId = 'impl-01'
+    agentInstanceStore.insert({
+      id: implId,
+      workflowInstanceId: 'wf-1',
+      roleNodeId: 'implementer',
+      sessionId: 'sess-impl',
+      parentAgentInstanceId: null,
+      spawnEdgeId: null,
+      status: 'running',
+      workspaceKind: 'owned',
+      workspacePath: '/tmp/wt/impl',
+      branchName: 'legion/wf-1/impl-1',
+      startedAt: new Date(),
+      endedAt: null,
+    })
+
+    const claudeStub = createCapturingProvider({ summary: 'claude did it' })
+    const codexStub = createCapturingProvider({
+      summary: '{"decision":"approve","feedback":"lgtm"}',
+    })
+    const providers = new Map([
+      ['claude-code', claudeStub as never],
+      ['codex', codexStub as never],
+    ])
+
+    const handler = new DelegateToolHandler({
+      workflowInstanceId: 'wf-1',
+      parentAgentInstanceId: implId,
+      agentInstanceStore,
+      workspaceProvider: createMockWorkspaceProvider(),
+      providers,
+      eventLog: stubEventLog() as never,
+      template: templateWithReviewsEdge(),  // reviewer.provider='codex'
+      baseCommitSha: 'base-sha',
+      blackboardStore: blackboard,
+    })
+
+    const out = await handler.handle({ role: 'reviewer', prompt: 'review please' })
+
+    expect(codexStub.lastLaunchRequest).toBeDefined()
+    expect(claudeStub.lastLaunchRequest).toBeUndefined()
+    expect(out.decision).toBe('approve')
+
+    db.close()
+  })
+
+  test('throws when target provider name is not registered in providers Map', async () => {
+    const db = new Database(':memory:')
+    initInstanceSchema(db)
+    initAgentInstanceSchema(db)
+    const agentInstanceStore = new AgentInstanceStore(db)
+    const blackboard = makeBlackboard(db)
+
+    agentInstanceStore.insert({
+      id: 'dir-01',
+      workflowInstanceId: 'wf-01',
+      roleNodeId: 'director',
+      sessionId: 'dir-sess',
+      parentAgentInstanceId: null,
+      spawnEdgeId: null,
+      status: 'running',
+      workspaceKind: 'owned',
+      workspacePath: '/tmp/wt/director',
+      branchName: null,
+      startedAt: new Date(),
+      endedAt: null,
+    })
+
+    // providers Map only has claude-code; implementer node has provider='claude-code' which IS registered.
+    // Use templateWithReviewsEdge which has reviewer.provider='codex', but here we test a
+    // template where the target node has an unregistered provider name.
+    const templateWithUnknownProvider: WorkflowTemplate = {
+      id: 'test',
+      name: 'test',
+      nodes: [
+        { type: 'trigger', id: 'trigger', kind: 'manual' },
+        { type: 'role', id: 'director', role: 'director', provider: 'claude-code', lifetime: 'per-workflow' },
+        { type: 'role', id: 'implementer', role: 'implementer', provider: 'unknown-ai', lifetime: 'per-task' },
+      ],
+      edges: [
+        { from: 'trigger', to: 'director', type: 'triggers' },
+        { from: 'director', to: 'implementer', type: 'delegates' },
+      ],
+    }
+
+    const providers = new Map([
+      ['claude-code', createMockProvider() as never],
+    ])
+
+    const handler = new DelegateToolHandler({
+      workflowInstanceId: 'wf-01',
+      parentAgentInstanceId: 'dir-01',
+      agentInstanceStore,
+      workspaceProvider: createMockWorkspaceProvider(),
+      providers,
+      eventLog: stubEventLog() as never,
+      template: templateWithUnknownProvider,
+      baseCommitSha: 'abc',
+      blackboardStore: blackboard,
+    })
+
+    await expect(handler.handle({ role: 'implementer', prompt: 'build it' })).rejects.toThrow(
+      /unknown-ai/,
+    )
+
+    db.close()
   })
 })

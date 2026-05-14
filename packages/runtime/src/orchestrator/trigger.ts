@@ -82,12 +82,13 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
     config,
   })
 
+  // TODO(a02 Task 7): receive providersByName from ctx instead of building a single-entry Map.
   const delegateHandler = new DelegateToolHandler({
     workflowInstanceId: instance.id,
     parentAgentInstanceId: directorAgentInstanceId,
     agentInstanceStore: input.agentInstanceStore,
     workspaceProvider: input.workspaceProvider,
-    provider: input.adapter,
+    providers: new Map([['claude-code', input.adapter]]),
     eventLog: { write: (evt) => input.eventLog.append(instance.id, evt) },
     template: input.template,
     baseCommitSha,
