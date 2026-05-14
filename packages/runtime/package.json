@@ -26,7 +26,8 @@
     "./template/registry": "./src/template/registry.ts",
     "./orchestrator/instance-store": "./src/orchestrator/instance-store.ts",
     "./orchestrator/spawn-agent": "./src/orchestrator/spawn-agent.ts",
-    "./orchestrator/trigger": "./src/orchestrator/trigger.ts"
+    "./orchestrator/trigger": "./src/orchestrator/trigger.ts",
+    "./store/agent-instance-store": "./src/store/agent-instance-store.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.140",
