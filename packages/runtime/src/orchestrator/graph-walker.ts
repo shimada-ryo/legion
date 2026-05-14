@@ -22,21 +22,29 @@ export function resolveTriggerTargets(template: WorkflowTemplate): RoleNode[] {
   return template.nodes.filter(isRole).filter((n) => targetIds.has(n.id))
 }
 
+export interface DelegateTarget {
+  roleNodeId: string
+  roleName: string
+  edgeType: 'delegates' | 'reviews'
+}
+
 /**
- * Resolve role nodes reachable from the given role via a 'delegates' edge.
- * Used by DelegateToolHandler to validate that the caller really has a
- * delegates edge to the requested role in the template snapshot.
+ * Resolve role nodes reachable from the given role via a 'delegates' or
+ * 'reviews' edge. Used by DelegateToolHandler to validate that the caller
+ * really has an outgoing edge to the requested role in the template snapshot.
+ * Phase 3: includes 'reviews' edges in addition to 'delegates'.
  */
 export function resolveDelegateTargets(
   template: WorkflowTemplate,
   fromRoleNodeId: string,
-): { roleNodeId: string; roleName: string }[] {
-  const targets: { roleNodeId: string; roleName: string }[] = []
+): DelegateTarget[] {
+  const targets: DelegateTarget[] = []
   for (const e of template.edges) {
-    if (e.type !== 'delegates' || e.from !== fromRoleNodeId) continue
+    if (e.from !== fromRoleNodeId) continue
+    if (e.type !== 'delegates' && e.type !== 'reviews') continue
     const node = template.nodes.find((n) => n.id === e.to)
     if (node && isRole(node)) {
-      targets.push({ roleNodeId: node.id, roleName: node.role })
+      targets.push({ roleNodeId: node.id, roleName: node.role, edgeType: e.type })
     }
   }
   return targets

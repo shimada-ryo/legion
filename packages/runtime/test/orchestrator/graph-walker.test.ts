@@ -52,18 +52,70 @@ describe('resolveTriggerTargets', () => {
 describe('resolveDelegateTargets', () => {
   test('returns role nodes connected by a delegates edge from the given role', () => {
     const out = resolveDelegateTargets(TEMPLATE, 'director')
-    expect(out).toEqual([{ roleNodeId: 'implementer', roleName: 'implementer' }])
+    expect(out).toEqual([{ roleNodeId: 'implementer', roleName: 'implementer', edgeType: 'delegates' }])
   })
 
-  test('returns empty when no delegates edge exists for the given role', () => {
-    expect(resolveDelegateTargets(TEMPLATE, 'implementer')).toEqual([])
+  test('returns reviews-edge targets from implementer (TEMPLATE has reviews edge)', () => {
+    const out = resolveDelegateTargets(TEMPLATE, 'implementer')
+    expect(out).toEqual([{ roleNodeId: 'reviewer', roleName: 'reviewer', edgeType: 'reviews' }])
   })
 
-  test('ignores non-delegates edges', () => {
+  test('returns empty when no delegates or reviews edge exists for the given role', () => {
+    expect(resolveDelegateTargets(TEMPLATE, 'reviewer')).toEqual([])
+  })
+
+  test('ignores non-delegates/non-reviews edges', () => {
     const t: WorkflowTemplate = {
       ...TEMPLATE,
       edges: [{ from: 'director', to: 'implementer', type: 'triggers' }],
     }
     expect(resolveDelegateTargets(t, 'director')).toEqual([])
+  })
+})
+
+describe('resolveDelegateTargets (Phase 3: reviews edge)', () => {
+  test('returns edgeType=delegates for direct delegates edges (Phase 2 compat)', () => {
+    const tmpl: WorkflowTemplate = {
+      id: 't', name: 't', description: '',
+      nodes: [
+        { id: 'director', type: 'role', role: 'director', provider: 'claude-code', lifetime: 'per-workflow' },
+        { id: 'implementer', type: 'role', role: 'implementer', provider: 'claude-code', lifetime: 'per-task' },
+      ] as any,
+      edges: [{ from: 'director', to: 'implementer', type: 'delegates' }],
+    }
+    const targets = resolveDelegateTargets(tmpl, 'director')
+    expect(targets).toEqual([{ roleNodeId: 'implementer', roleName: 'implementer', edgeType: 'delegates' }])
+  })
+
+  test('returns edgeType=reviews for reviews edges', () => {
+    const tmpl: WorkflowTemplate = {
+      id: 't', name: 't', description: '',
+      nodes: [
+        { id: 'implementer', type: 'role', role: 'implementer', provider: 'claude-code', lifetime: 'per-task' },
+        { id: 'reviewer', type: 'role', role: 'reviewer', provider: 'codex', lifetime: 'per-task' },
+      ] as any,
+      edges: [{ from: 'implementer', to: 'reviewer', type: 'reviews' }],
+    }
+    const targets = resolveDelegateTargets(tmpl, 'implementer')
+    expect(targets).toEqual([{ roleNodeId: 'reviewer', roleName: 'reviewer', edgeType: 'reviews' }])
+  })
+
+  test('returns both delegates and reviews targets when both are defined', () => {
+    const tmpl: WorkflowTemplate = {
+      id: 't', name: 't', description: '',
+      nodes: [
+        { id: 'a', type: 'role', role: 'a', provider: 'claude-code', lifetime: 'per-task' },
+        { id: 'b', type: 'role', role: 'b', provider: 'claude-code', lifetime: 'per-task' },
+        { id: 'c', type: 'role', role: 'c', provider: 'codex', lifetime: 'per-task' },
+      ] as any,
+      edges: [
+        { from: 'a', to: 'b', type: 'delegates' },
+        { from: 'a', to: 'c', type: 'reviews' },
+      ],
+    }
+    const targets = resolveDelegateTargets(tmpl, 'a')
+    expect(targets).toHaveLength(2)
+    expect(targets).toContainEqual({ roleNodeId: 'b', roleName: 'b', edgeType: 'delegates' })
+    expect(targets).toContainEqual({ roleNodeId: 'c', roleName: 'c', edgeType: 'reviews' })
   })
 })
