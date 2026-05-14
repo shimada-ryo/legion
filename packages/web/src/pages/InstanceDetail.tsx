@@ -40,7 +40,7 @@ export default function InstanceDetail() {
         />
       </div>
       <div className="event-log" style={eventLogStyle}>
-        <EventLogPane events={events} instanceId={data.id} />
+        <EventLogPane events={events} instanceId={data.id} agentInstances={data.agentInstances} />
       </div>
     </div>
   )
