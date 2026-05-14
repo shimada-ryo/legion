@@ -2,7 +2,7 @@ import { describe, test, expect, afterEach } from 'bun:test'
 import { render, cleanup } from '@testing-library/react'
 import OverviewTab from '../../src/components/sidebar-tabs/OverviewTab'
 import type { WorkflowTemplate } from '@legion/core'
-import type { AgentInstanceView } from '../../src/types'
+import type { AgentInstanceView, BlackboardMessage } from '../../src/types'
 
 const TEMPLATE: WorkflowTemplate = {
   id: 't',
@@ -43,5 +43,119 @@ describe('OverviewTab parent/children section', () => {
       <OverviewTab template={TEMPLATE} selectedNodeId="implementer" agentInstances={[]} />,
     )
     expect(container.textContent).not.toMatch(/Spawned/i)
+  })
+})
+
+const REVIEW_TEMPLATE: WorkflowTemplate = {
+  id: 'r',
+  name: 'R',
+  nodes: [
+    { type: 'role', id: 'implementer', role: 'implementer', provider: 'claude-code', lifetime: 'per-task' },
+    { type: 'role', id: 'reviewer', role: 'reviewer', provider: 'codex', lifetime: 'per-task' },
+  ],
+  edges: [{ from: 'implementer', to: 'reviewer', type: 'reviews' }],
+}
+
+const REVIEWER_AGENT: AgentInstanceView = {
+  id: 'rev-1',
+  roleNodeId: 'reviewer',
+  workflowInstanceId: 'wf',
+  sessionId: 'sess-r',
+  status: 'completed',
+  parentAgentInstanceId: 'impl-1',
+  spawnEdgeId: 'implementer→reviewer',
+  workspace: { kind: 'owned', path: '/r' },
+  startedAt: '',
+  endedAt: '',
+}
+
+const IMPL_AGENT: AgentInstanceView = {
+  id: 'impl-1',
+  roleNodeId: 'implementer',
+  workflowInstanceId: 'wf',
+  sessionId: 'sess-i',
+  status: 'completed',
+  workspace: { kind: 'owned', path: '/i' },
+  branchName: 'legion/x/impl-1',
+  startedAt: '',
+  endedAt: '',
+}
+
+describe('OverviewTab Reviewer decision (Phase 3)', () => {
+  test('shows Reviewer decision and feedback for a reviewer node', () => {
+    const messages: BlackboardMessage[] = [
+      {
+        id: 'm1',
+        workflowInstanceId: 'wf',
+        topic: 'system.review.decision',
+        publisherAgentId: null,
+        payload: { agentInstanceId: 'rev-1', decision: 'request-changes', feedback: 'rename foo' },
+        publishedAt: 100,
+      },
+    ]
+    const { container } = render(
+      <OverviewTab
+        template={REVIEW_TEMPLATE}
+        selectedNodeId="reviewer"
+        agentInstances={[REVIEWER_AGENT, IMPL_AGENT]}
+        blackboardMessages={messages}
+      />,
+    )
+    expect(container.textContent).toMatch(/Decision/i)
+    expect(container.textContent).toContain('request-changes')
+    expect(container.textContent).toContain('rename foo')
+  })
+
+  test('omits Decision section for non-reviewer roles', () => {
+    const messages: BlackboardMessage[] = [
+      {
+        id: 'm1',
+        workflowInstanceId: 'wf',
+        topic: 'system.review.decision',
+        publisherAgentId: null,
+        payload: { agentInstanceId: 'rev-1', decision: 'approve' },
+        publishedAt: 100,
+      },
+    ]
+    const { container } = render(
+      <OverviewTab
+        template={REVIEW_TEMPLATE}
+        selectedNodeId="implementer"
+        agentInstances={[REVIEWER_AGENT, IMPL_AGENT]}
+        blackboardMessages={messages}
+      />,
+    )
+    expect(container.textContent).not.toMatch(/Decision/i)
+  })
+
+  test('uses the latest decision when multiple are published for the same reviewer', () => {
+    const messages: BlackboardMessage[] = [
+      {
+        id: 'm1',
+        workflowInstanceId: 'wf',
+        topic: 'system.review.decision',
+        publisherAgentId: null,
+        payload: { agentInstanceId: 'rev-1', decision: 'request-changes', feedback: 'first round' },
+        publishedAt: 100,
+      },
+      {
+        id: 'm2',
+        workflowInstanceId: 'wf',
+        topic: 'system.review.decision',
+        publisherAgentId: null,
+        payload: { agentInstanceId: 'rev-1', decision: 'approve' },
+        publishedAt: 200,
+      },
+    ]
+    const { container } = render(
+      <OverviewTab
+        template={REVIEW_TEMPLATE}
+        selectedNodeId="reviewer"
+        agentInstances={[REVIEWER_AGENT, IMPL_AGENT]}
+        blackboardMessages={messages}
+      />,
+    )
+    expect(container.textContent).toContain('approve')
+    expect(container.textContent).not.toContain('first round')
   })
 })

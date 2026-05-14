@@ -1,13 +1,44 @@
 import type { WorkflowTemplate } from '@legion/core'
-import type { AgentInstanceView } from '../../types'
+import type { AgentInstanceView, BlackboardMessage } from '../../types'
 
 export interface OverviewTabProps {
   template: WorkflowTemplate
   selectedNodeId: string | null
   agentInstances?: AgentInstanceView[]
+  blackboardMessages?: BlackboardMessage[]
 }
 
-export default function OverviewTab({ template, selectedNodeId, agentInstances = [] }: OverviewTabProps) {
+interface ReviewDecision {
+  decision: string
+  feedback?: string
+  notes?: string
+}
+
+function latestDecisionFor(
+  agentInstanceId: string,
+  blackboardMessages: BlackboardMessage[],
+): ReviewDecision | undefined {
+  for (let i = blackboardMessages.length - 1; i >= 0; i--) {
+    const m = blackboardMessages[i]!
+    if (m.topic !== 'system.review.decision') continue
+    const p = m.payload as { agentInstanceId?: unknown } & Partial<ReviewDecision>
+    if (p.agentInstanceId === agentInstanceId && typeof p.decision === 'string') {
+      return {
+        decision: p.decision,
+        ...(typeof p.feedback === 'string' ? { feedback: p.feedback } : {}),
+        ...(typeof p.notes === 'string' ? { notes: p.notes } : {}),
+      }
+    }
+  }
+  return undefined
+}
+
+export default function OverviewTab({
+  template,
+  selectedNodeId,
+  agentInstances = [],
+  blackboardMessages = [],
+}: OverviewTabProps) {
   if (!selectedNodeId) return <div>Select a node to inspect.</div>
   const node = template.nodes.find((n) => n.id === selectedNodeId)
   if (!node) return <div>Unknown node.</div>
@@ -64,14 +95,34 @@ export default function OverviewTab({ template, selectedNodeId, agentInstances =
           </>
         )}
       </dl>
-      {here.map((a) => (
-        <div key={a.id} style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #eee' }}>
-          <div><strong>Agent:</strong> {a.id}</div>
-          <div><strong>Status:</strong> {a.status}</div>
-          {a.branchName && <div><strong>Branch:</strong> {a.branchName}</div>}
-          <div><strong>Workspace:</strong> {a.workspace.path}</div>
-        </div>
-      ))}
+      {here.map((a) => {
+        const decision = node.type === 'role' && node.role === 'reviewer'
+          ? latestDecisionFor(a.id, blackboardMessages)
+          : undefined
+        return (
+          <div key={a.id} style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #eee' }}>
+            <div><strong>Agent:</strong> {a.id}</div>
+            <div><strong>Status:</strong> {a.status}</div>
+            {a.branchName && <div><strong>Branch:</strong> {a.branchName}</div>}
+            <div><strong>Workspace:</strong> {a.workspace.path}</div>
+            {decision && (
+              <div style={{ marginTop: 6, padding: 6, background: '#f8f8ff', border: '1px solid #dde' }}>
+                <div><strong>Decision:</strong> <span data-decision={decision.decision}>{decision.decision}</span></div>
+                {decision.feedback && (
+                  <div style={{ marginTop: 4, whiteSpace: 'pre-wrap' }}>
+                    <strong>Feedback:</strong> {decision.feedback}
+                  </div>
+                )}
+                {decision.notes && (
+                  <div style={{ marginTop: 4, fontStyle: 'italic', color: '#666' }}>
+                    {decision.notes}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
       {parents.length > 0 && (
         <div style={{ marginTop: 12 }}>
           <div><strong>Spawned by</strong></div>
