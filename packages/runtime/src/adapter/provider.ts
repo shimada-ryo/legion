@@ -1,4 +1,3 @@
-import { ulid } from 'ulid'
 import type {
   AgentProvider,
   AgentEvent,
@@ -11,12 +10,11 @@ import type {
   Transcript,
   AgentCapabilities,
 } from '@legion/core'
-import { defaultAllowedToolsFor } from './role-profile'
-import { ApprovalOrchestrator } from './approval'
-import { SessionStore, EventInjector } from './session-store'
+import { SessionStore } from './session-store'
 import { toAgentEvent } from './event-convert'
+import { launchSession, type QueryFn } from './provider/launch'
 
-export type QueryFn = (input: unknown) => AsyncIterable<unknown>
+export type { QueryFn } from './provider/launch'
 
 export interface ClaudeCodeAgentSDKProviderOptions {
   /** Inject the SDK query function. In tests, pass a mock. */
@@ -47,43 +45,9 @@ export class ClaudeCodeAgentSDKProvider implements AgentProvider {
   }
 
   async launch(req: LaunchRequest): Promise<SessionHandle> {
-    const sessionId = ulid()
-    const allowed = defaultAllowedToolsFor(req.role)
-    const approval = new ApprovalOrchestrator(allowed)
-    const injector = new EventInjector()
-
-    approval.on('permission_request', (permReq) => {
-      injector.push({
-        id: ulid(),
-        sessionId,
-        type: 'permission_request',
-        payload: {
-          approvalId: permReq.approvalId,
-          tool: permReq.tool,
-          input: permReq.input,
-        },
-        timestamp: new Date(),
-      })
-    })
-
-    const iter = this.opts.query({
-      prompt: req.initialPrompt,
-      options: {
-        cwd: req.workdir,
-        allowedTools: allowed,
-        permissionMode: 'default',
-        canUseTool: async (toolName: string, input: Record<string, unknown>) => {
-          const d = await approval.decide({ tool: toolName, input })
-          return d.allow
-            ? { behavior: 'allow' as const, updatedInput: input }
-            : { behavior: 'deny' as const, message: d.reason ?? 'denied' }
-        },
-        ...(req.model !== undefined ? { model: req.model } : {}),
-        ...(req.env !== undefined ? { env: req.env } : {}),
-      },
-    })
-    this.store.set({ sessionId, iter, approval, workdir: req.workdir, role: req.role, injector })
-    return { sessionId }
+    const s = launchSession(req, this.opts.query)
+    this.store.set(s)
+    return { sessionId: s.sessionId }
   }
 
   async *stream(sessionId: string): AsyncIterable<AgentEvent> {
