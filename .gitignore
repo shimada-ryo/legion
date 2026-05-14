@@ -17,6 +17,7 @@ Thumbs.db
 .claude/local/
 .claude/worktrees/
 .claude/settings.local.json
+.superpowers/
 
 coverage/
 .nyc_output/
