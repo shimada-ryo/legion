@@ -101,8 +101,7 @@ describe('GET /api/instances/:id/diff', () => {
     )
     expect(res.status).toBe(200)
     const body = (await res.json()) as Array<{ agentInstanceId: string; branch: string }>
-    expect(Array.isArray(body)).toBe(true)
-    expect(body.every((e) => e.branch !== null)).toBe(true)
+    expect(body).toEqual([])
   })
 
   test('returns one entry per branched agent with diff empty when branch missing', async () => {
@@ -142,5 +141,37 @@ describe('GET /api/instances/:id/diff', () => {
     expect(entry).toBeDefined()
     expect(entry!.branch).toBe('legion/nonexistent-branch')
     expect(entry!.diff).toBe('')
+  })
+
+  test('excludes rows with null branchName from response', async () => {
+    const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ templateId: 'feature-implementation', userPrompt: 'x' }),
+    })
+    const { workflowInstanceId } = (await trig.json()) as { workflowInstanceId: string }
+    await new Promise((r) => setTimeout(r, 100))
+
+    // Insert a synthetic row with null branch — must not appear in response
+    server.runtime.agentInstanceStore.insert({
+      id: 'detached-1',
+      workflowInstanceId,
+      roleNodeId: 'implementer',
+      sessionId: 'sess-detached',
+      parentAgentInstanceId: null,
+      spawnEdgeId: null,
+      status: 'completed',
+      workspaceKind: 'owned',
+      workspacePath: '/tmp/wt/detached',
+      branchName: null,
+      startedAt: new Date(),
+      endedAt: new Date(),
+    })
+
+    const res = await fetch(
+      `http://localhost:${server.port}/api/instances/${workflowInstanceId}/diff`,
+    )
+    const body = (await res.json()) as Array<{ agentInstanceId: string }>
+    expect(body.some((e) => e.agentInstanceId === 'detached-1')).toBe(false)
   })
 })
