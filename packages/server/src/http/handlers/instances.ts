@@ -49,7 +49,11 @@ export function handleInstancesList(_req: Request, ctx: AppRuntime): Response {
   return Response.json(list)
 }
 
-export function handleInstanceDetail(id: string, ctx: AppRuntime): Response {
+export function handleInstanceDetail(
+  id: string,
+  req: Request,
+  ctx: AppRuntime,
+): Response {
   const inst = ctx.store.get(id)
   if (!inst) return new Response('Not Found', { status: 404 })
   const events = ctx.log.history(id)
@@ -69,6 +73,17 @@ export function handleInstanceDetail(id: string, ctx: AppRuntime): Response {
     startedAt: r.startedAt.toISOString(),
     endedAt: r.endedAt ? r.endedAt.toISOString() : null,
   }))
+
+  // Phase 3 (§ 8.4): expose Blackboard messages for the Reviewer flow.
+  const url = new URL(req.url)
+  const topicPrefix = url.searchParams.get('topicPrefix') ?? undefined
+  const limitRaw = url.searchParams.get('limit')
+  const limit = limitRaw ? Math.max(1, parseInt(limitRaw, 10) || 200) : 200
+  let blackboardMessages = ctx.blackboardStore.listByWorkflow(id, { limit })
+  if (topicPrefix) {
+    blackboardMessages = blackboardMessages.filter((m) => m.topic.startsWith(topicPrefix))
+  }
+
   return Response.json({
     id: inst.id,
     templateId: inst.templateId,
@@ -78,5 +93,6 @@ export function handleInstanceDetail(id: string, ctx: AppRuntime): Response {
     endedAt: inst.endedAt ? inst.endedAt.toISOString() : null,
     agentInstances,
     events,
+    blackboardMessages,
   })
 }

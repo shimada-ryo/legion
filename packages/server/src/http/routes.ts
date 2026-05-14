@@ -31,6 +31,6 @@ export function route(
   const d = path.match(/^\/api\/instances\/([^/]+)\/diff$/)
   if (d) return handleInstanceDiff(d[1]!, ctx)
   const m = path.match(/^\/api\/instances\/([^/]+)$/)
-  if (m) return handleInstanceDetail(m[1]!, ctx)
+  if (m) return handleInstanceDetail(m[1]!, req, ctx)
   return new Response('Not Found', { status: 404 })
 }

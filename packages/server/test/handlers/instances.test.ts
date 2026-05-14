@@ -115,6 +115,95 @@ describe('POST /api/workflows/trigger', () => {
   })
 })
 
+describe('GET /api/instances/:id (Phase 3: blackboardMessages)', () => {
+  test('returns an empty blackboardMessages array when nothing was published', async () => {
+    const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ templateId: 'feature-implementation', userPrompt: '' }),
+    })
+    const { workflowInstanceId } = (await trig.json()) as { workflowInstanceId: string }
+
+    const detailRes = await fetch(
+      `http://localhost:${server.port}/api/instances/${workflowInstanceId}`,
+    )
+    const detail = (await detailRes.json()) as { blackboardMessages: unknown[] }
+    expect(Array.isArray(detail.blackboardMessages)).toBe(true)
+    expect(detail.blackboardMessages).toHaveLength(0)
+  })
+
+  test('returns blackboardMessages ordered by published_at', async () => {
+    const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ templateId: 'feature-implementation', userPrompt: '' }),
+    })
+    const { workflowInstanceId } = (await trig.json()) as { workflowInstanceId: string }
+
+    server.runtime.blackboardStore.insert({
+      id: '01HZ-A',
+      workflowInstanceId,
+      topic: 'system.delegate.start',
+      publisherAgentId: null,
+      payload: { role: 'implementer' },
+      publishedAt: 1000,
+    })
+    server.runtime.blackboardStore.insert({
+      id: '01HZ-B',
+      workflowInstanceId,
+      topic: 'system.review.decision',
+      publisherAgentId: null,
+      payload: { decision: 'approve' },
+      publishedAt: 2000,
+    })
+
+    const detailRes = await fetch(
+      `http://localhost:${server.port}/api/instances/${workflowInstanceId}`,
+    )
+    const detail = (await detailRes.json()) as {
+      blackboardMessages: Array<{ topic: string; payload: { decision?: string } }>
+    }
+    expect(detail.blackboardMessages).toHaveLength(2)
+    expect(detail.blackboardMessages[0]!.topic).toBe('system.delegate.start')
+    expect(detail.blackboardMessages[1]!.topic).toBe('system.review.decision')
+    expect(detail.blackboardMessages[1]!.payload.decision).toBe('approve')
+  })
+
+  test('honors ?topicPrefix= query filter', async () => {
+    const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ templateId: 'feature-implementation', userPrompt: '' }),
+    })
+    const { workflowInstanceId } = (await trig.json()) as { workflowInstanceId: string }
+
+    server.runtime.blackboardStore.insert({
+      id: '01HZ-S',
+      workflowInstanceId,
+      topic: 'system.delegate.start',
+      publisherAgentId: null,
+      payload: {},
+      publishedAt: 1000,
+    })
+    server.runtime.blackboardStore.insert({
+      id: '01HZ-U',
+      workflowInstanceId,
+      topic: 'user.something',
+      publisherAgentId: null,
+      payload: {},
+      publishedAt: 2000,
+    })
+
+    const detailRes = await fetch(
+      `http://localhost:${server.port}/api/instances/${workflowInstanceId}?topicPrefix=system.`,
+    )
+    const detail = (await detailRes.json()) as {
+      blackboardMessages: Array<{ topic: string }>
+    }
+    expect(detail.blackboardMessages.map((m) => m.topic)).toEqual(['system.delegate.start'])
+  })
+})
+
 describe('GET /api/instances and /api/instances/:id', () => {
   test('list and detail work after a trigger', async () => {
     const trig = await fetch(`http://localhost:${server.port}/api/workflows/trigger`, {
