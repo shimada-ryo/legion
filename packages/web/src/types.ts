@@ -1,4 +1,6 @@
-import type { WorkflowTemplate, AgentEvent } from '@legion/core'
+import type { WorkflowTemplate, AgentEvent, BlackboardMessage } from '@legion/core'
+
+export type { BlackboardMessage } from '@legion/core'
 
 export interface InstanceSummary {
   id: string
@@ -26,6 +28,7 @@ export interface InstanceDetail extends InstanceSummary {
   templateSnapshot: WorkflowTemplate
   events: AgentEvent[]
   agentInstances: AgentInstanceView[]
+  blackboardMessages: BlackboardMessage[]
 }
 
 export interface TemplateSummary {

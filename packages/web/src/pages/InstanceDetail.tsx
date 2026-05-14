@@ -12,7 +12,7 @@ export default function InstanceDetail() {
   const { id } = useParams<{ id: string }>()
   const [data, setData] = useState<InstanceDetailType | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
-  const events = useInstanceEventStream(id)
+  const { events, blackboardMessages } = useInstanceEventStream(id)
 
   useEffect(() => {
     if (!id) return
@@ -37,10 +37,15 @@ export default function InstanceDetail() {
           template={data.templateSnapshot}
           events={events}
           agentInstances={data.agentInstances}
+          blackboardMessages={blackboardMessages}
         />
       </div>
       <div className="event-log" style={eventLogStyle}>
-        <EventLogPane events={events} agentInstances={data.agentInstances} />
+        <EventLogPane
+          events={events}
+          agentInstances={data.agentInstances}
+          blackboardMessages={blackboardMessages}
+        />
       </div>
     </div>
   )
