@@ -20,9 +20,16 @@ export async function* streamCodexSession(
   let yielded = 0
   for await (const ev of events) {
     rawCount++
-    const t = (ev as RawEvent).type
-    debugLog('codex.stream.event', { sessionId, rawCount, type: t })
-    const translated = translateEvent(ev as RawEvent, sessionId)
+    const raw = ev as RawEvent
+    const t = raw.type
+    const errPreview =
+      t === 'error' || t === 'turn.failed'
+        ? typeof raw.error === 'string'
+          ? raw.error
+          : raw.error?.message ?? raw.message
+        : undefined
+    debugLog('codex.stream.event', { sessionId, rawCount, type: t, ...(errPreview !== undefined ? { error: errPreview } : {}) })
+    const translated = translateEvent(raw, sessionId)
     if (translated) {
       yielded++
       yield translated

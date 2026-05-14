@@ -140,9 +140,8 @@ describe.skipIf(!HAS_AUTH)('Phase 3 delegate flow with Reviewer (real SDK)', () 
           dumpStateOnFailure('approve-round TIMEOUT', workflowInstanceId, agentStore, log, blackboard)
           throw err
         }
-        if (finalStatus !== 'completed') {
-          dumpStateOnFailure('approve-round NOT COMPLETED', workflowInstanceId, agentStore, log, blackboard)
-        }
+        // Always dump on integration runs so we can diagnose flaky behaviour.
+        dumpStateOnFailure('approve-round POST-RUN', workflowInstanceId, agentStore, log, blackboard)
         expect(finalStatus).toBe('completed')
 
         const rows = agentStore.listByWorkflow(workflowInstanceId)
@@ -231,9 +230,7 @@ describe.skipIf(!HAS_AUTH)('Phase 3 delegate flow with Reviewer (real SDK)', () 
           dumpStateOnFailure('retry-round TIMEOUT', workflowInstanceId, agentStore, log, blackboard)
           throw err
         }
-        if (finalStatus !== 'completed') {
-          dumpStateOnFailure('retry-round NOT COMPLETED', workflowInstanceId, agentStore, log, blackboard)
-        }
+        dumpStateOnFailure('retry-round POST-RUN', workflowInstanceId, agentStore, log, blackboard)
         expect(finalStatus).toBe('completed')
 
         const rows = agentStore.listByWorkflow(workflowInstanceId)
