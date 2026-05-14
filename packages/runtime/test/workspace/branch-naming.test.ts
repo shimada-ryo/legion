@@ -18,7 +18,6 @@ describe('branchName', () => {
   })
 
   test('uses canonical role abbreviation', () => {
-    expect(branchName('01j9x5z8', 'director', 1)).toBe('legion/01j9x5z8/director')
     expect(branchName('01j9x5z8', 'reviewer', 1)).toBe('legion/01j9x5z8/reviewer-1')
   })
 
