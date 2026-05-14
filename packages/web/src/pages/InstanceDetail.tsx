@@ -26,6 +26,7 @@ export default function InstanceDetail() {
       <div className="canvas-area" style={canvasStyle}>
         <CanvasOverlay
           template={data.templateSnapshot}
+          agentInstances={data.agentInstances}
           events={events}
           onSelectNode={setSelectedNodeId}
         />
