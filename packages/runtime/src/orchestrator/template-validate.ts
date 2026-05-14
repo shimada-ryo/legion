@@ -21,20 +21,21 @@ export function validateTemplate(
   for (const node of template.nodes) {
     if (node.type !== 'role') continue
 
-    const provider = (node as { provider?: string }).provider
-    if (!provider) {
+    // node is narrowed to RoleNode; access fields directly.
+    // Runtime guards below defend against malformed YAML/JSON input where
+    // provider/role may be missing or empty despite the type declaration.
+    if (!node.provider) {
       errors.push(`role node '${node.id}' must declare a 'provider' field`)
       continue
     }
-    if (!registeredProviders.has(provider)) {
+    if (!registeredProviders.has(node.provider)) {
       errors.push(
-        `role node '${node.id}' uses unknown provider '${provider}' (registered: ${[...registeredProviders].join(', ')})`,
+        `role node '${node.id}' uses unknown provider '${node.provider}' (registered: ${[...registeredProviders].join(', ')})`,
       )
     }
-    const role = (node as { role?: string }).role
-    if (provider === 'codex' && role !== undefined && CODEX_FORBIDDEN_ROLES.has(role)) {
+    if (node.provider === 'codex' && CODEX_FORBIDDEN_ROLES.has(node.role)) {
       errors.push(
-        `provider=codex is not allowed for role '${role}' (Phase 3 constraint; codex is reviewer-only)`,
+        `provider=codex is not allowed for role '${node.role}' (Phase 3 constraint; codex is reviewer-only)`,
       )
     }
   }

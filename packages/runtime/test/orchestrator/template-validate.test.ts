@@ -26,6 +26,7 @@ describe('validateTemplate', () => {
     }
     const result = validateTemplate(tmpl, REGISTERED)
     expect(result.errors).toEqual([])
+    expect(result.warnings).toEqual([])
   })
 
   it('rejects role node without provider field', () => {
