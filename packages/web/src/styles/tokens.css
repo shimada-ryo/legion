@@ -1,0 +1,78 @@
+/* legion web design tokens — Midnight Indigo */
+/* Light is the default (no data-theme attribute or data-theme="light") */
+
+:root,
+:root[data-theme="light"] {
+  /* Background */
+  --bg-canvas: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+
+  /* Text */
+  --fg-primary: #1e1b4b;
+  --fg-muted: #475569;
+  --fg-subtle: #94a3b8;
+
+  /* Border */
+  --border-default: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  /* Accent */
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-fg: #ffffff;
+
+  /* Status (semantic) */
+  --status-running: #6366f1;
+  --status-success: #10b981;
+  --status-warning: #f59e0b;
+  --status-error: #ef4444;
+
+  /* React Flow */
+  --node-bg: #ffffff;
+  --node-border: #c7d2fe;
+  --edge: #818cf8;
+  --canvas-grid: #e0e7ff;
+
+  /* Typography */
+  --font-base:
+    'Inter', 'Murecho',
+    'Roboto', 'Noto Sans JP',
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+    'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
+    'Yu Gothic UI', 'Yu Gothic', 'Meiryo',
+    sans-serif;
+
+  --font-mono:
+    'JetBrains Mono',
+    'Fira Code', 'Cascadia Code',
+    ui-monospace, 'SF Mono', 'Consolas', 'Menlo',
+    monospace;
+}
+
+:root[data-theme="dark"] {
+  --bg-canvas: #0c0a1a;
+  --bg-surface: #1e1b4b;
+  --bg-elevated: #2a2660;
+
+  --fg-primary: #e0e7ff;
+  --fg-muted: #a5b4fc;
+  --fg-subtle: #6366f1;
+
+  --border-default: #312e81;
+  --border-strong: #4338ca;
+
+  --accent: #a5b4fc;
+  --accent-hover: #c7d2fe;
+  --accent-fg: #1e1b4b;
+
+  --status-running: #a5b4fc;
+  --status-success: #34d399;
+  --status-warning: #fbbf24;
+  --status-error: #f87171;
+
+  --node-bg: #1e1b4b;
+  --node-border: #4338ca;
+  --edge: #818cf8;
+  --canvas-grid: #312e81;
+}
