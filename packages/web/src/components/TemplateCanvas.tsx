@@ -1,21 +1,44 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow,
   Background,
   Controls,
   type Node,
   type Edge,
+  type NodeChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import '../styles/react-flow.css'
-import type { WorkflowTemplate } from '@legion/core'
+import type { WorkflowTemplate, NodePosition } from '@legion/core'
 import { nodeStyleFor, edgeStyleFor } from './template-canvas/styling'
-import { layoutTemplate } from './template-canvas/layout'
+import {
+  layoutTemplate,
+  applyPositionChanges,
+} from './template-canvas/layout'
 import { useTheme } from '../theme/ThemeProvider'
 
-export default function TemplateCanvas({ template }: { template: WorkflowTemplate }) {
-  const positions = useMemo(() => layoutTemplate(template), [template])
+export interface TemplateCanvasProps {
+  template: WorkflowTemplate
+  onDirtyChange: (dirty: boolean) => void
+  onPositionsChange: (overrides: Record<string, NodePosition>) => void
+  /** Parent increments this to ask the canvas to drop in-flight overrides. */
+  saveSignal: number
+}
+
+export default function TemplateCanvas({
+  template,
+  onDirtyChange,
+  onPositionsChange,
+  saveSignal,
+}: TemplateCanvasProps) {
+  const baseLayout = useMemo(() => layoutTemplate(template), [template])
+  const [overrides, setOverrides] = useState<Record<string, NodePosition>>({})
   const { resolved } = useTheme()
+
+  useEffect(() => { setOverrides({}) }, [template.id])
+  useEffect(() => { setOverrides({}) }, [saveSignal])
+  useEffect(() => { onDirtyChange(Object.keys(overrides).length > 0) }, [overrides, onDirtyChange])
+  useEffect(() => { onPositionsChange(overrides) }, [overrides, onPositionsChange])
 
   const [dotColor, setDotColor] = useState('')
   useEffect(() => {
@@ -27,7 +50,7 @@ export default function TemplateCanvas({ template }: { template: WorkflowTemplat
     () =>
       template.nodes.map((n) => {
         const style = nodeStyleFor(n)
-        const pos = positions[n.id] ?? { x: 0, y: 0 }
+        const pos = overrides[n.id] ?? baseLayout[n.id] ?? { x: 0, y: 0 }
         return {
           id: n.id,
           position: pos,
@@ -43,7 +66,7 @@ export default function TemplateCanvas({ template }: { template: WorkflowTemplat
           },
         }
       }),
-    [template, positions],
+    [template, baseLayout, overrides],
   )
 
   const edges = useMemo<Edge[]>(
@@ -63,13 +86,21 @@ export default function TemplateCanvas({ template }: { template: WorkflowTemplat
     [template],
   )
 
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setOverrides((prev) => applyPositionChanges(prev, changes, baseLayout))
+    },
+    [baseLayout],
+  )
+
   return (
     <div style={{ width: '100%', height: '100%' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        onNodesChange={onNodesChange}
         fitView
-        nodesDraggable={false}
+        nodesDraggable={true}
         nodesConnectable={false}
       >
         <Background color={dotColor} />

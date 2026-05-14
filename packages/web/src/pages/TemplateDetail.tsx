@@ -138,7 +138,12 @@ export default function TemplateDetail() {
       </form>
 
       <div style={{ flex: 1, minHeight: 0 }}>
-        <TemplateCanvas template={template} />
+        <TemplateCanvas
+          template={template}
+          onDirtyChange={() => {}}
+          onPositionsChange={() => {}}
+          saveSignal={0}
+        />
       </div>
     </div>
   )
