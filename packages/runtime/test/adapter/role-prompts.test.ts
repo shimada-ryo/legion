@@ -22,3 +22,23 @@ describe('defaultSystemPromptFor', () => {
     expect(defaultSystemPromptFor('unknown-role')).toBe('')
   })
 })
+
+describe('REVIEWER_PROMPT (Phase 3)', () => {
+  test('reviewer prompt mentions structured output and decision values', () => {
+    const p = defaultSystemPromptFor('reviewer')
+    expect(p.length).toBeGreaterThan(0)
+    expect(p).toContain('Reviewer')
+    expect(p).toContain('decision')
+    expect(p).toContain('approve')
+    expect(p).toContain('request-changes')
+    expect(p).toContain('reject')
+    expect(p).toContain('JSON')
+  })
+
+  test('reviewer prompt does NOT instruct edits or commits', () => {
+    const p = defaultSystemPromptFor('reviewer')
+    expect(p).not.toContain('git add')
+    expect(p).not.toContain('git commit')
+    expect(p).not.toContain('Edit files')
+  })
+})
