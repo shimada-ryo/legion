@@ -1,6 +1,9 @@
 import type { Database } from 'bun:sqlite'
 import type { AgentStatus } from '@legion/core'
 
+/** Placeholder session id used during AgentInstance insertion before the provider issues a real session id. */
+export const PENDING_SESSION_ID = 'pending'
+
 export interface AgentInstanceRow {
   id: string
   workflowInstanceId: string

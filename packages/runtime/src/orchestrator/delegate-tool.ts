@@ -11,7 +11,7 @@ import type {
 } from '@legion/core'
 import { defaultSystemPromptFor } from '../adapter/role-prompts'
 import { resolveDelegateTargets } from './graph-walker'
-import type { AgentInstanceStore } from '../store/agent-instance-store'
+import { PENDING_SESSION_ID, type AgentInstanceStore } from '../store/agent-instance-store'
 import type { WorkspaceProvider } from '../workspace/provider'
 
 export interface EventLogWriter {
@@ -21,7 +21,6 @@ export interface EventLogWriter {
 export interface DelegateToolDeps {
   workflowInstanceId: string
   parentAgentInstanceId: string
-  parentSessionId: string
   agentInstanceStore: AgentInstanceStore
   workspaceProvider: WorkspaceProvider
   provider: AgentProvider
@@ -71,7 +70,7 @@ export class DelegateToolHandler {
       id: agentInstanceId,
       workflowInstanceId: this.deps.workflowInstanceId,
       roleNodeId: target.roleNodeId,
-      sessionId: 'pending',
+      sessionId: PENDING_SESSION_ID,
       parentAgentInstanceId: this.deps.parentAgentInstanceId,
       spawnEdgeId: `${fromRoleNodeId}→${target.roleNodeId}`,
       status: 'starting',

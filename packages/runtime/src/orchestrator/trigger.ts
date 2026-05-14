@@ -2,7 +2,7 @@ import { ulid } from 'ulid'
 import type { WorkflowTemplate, AgentProvider } from '@legion/core'
 import type { EventLog } from '../eventlog/eventlog'
 import type { InstanceStore } from './instance-store'
-import type { AgentInstanceStore } from '../store/agent-instance-store'
+import { PENDING_SESSION_ID, type AgentInstanceStore } from '../store/agent-instance-store'
 import type { WorkspaceProvider } from '../workspace/provider'
 import { resolveCommitSha } from '../workspace/git'
 import { buildInitialPrompt } from './spawn-agent'
@@ -60,7 +60,7 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
     id: directorAgentInstanceId,
     workflowInstanceId: instance.id,
     roleNodeId: directorNode.id,
-    sessionId: 'pending',
+    sessionId: PENDING_SESSION_ID,
     parentAgentInstanceId: null,
     spawnEdgeId: null,
     status: 'starting',
@@ -81,7 +81,6 @@ export async function triggerWorkflow(input: TriggerInput): Promise<TriggerResul
   const delegateHandler = new DelegateToolHandler({
     workflowInstanceId: instance.id,
     parentAgentInstanceId: directorAgentInstanceId,
-    parentSessionId: 'pending',
     agentInstanceStore: input.agentInstanceStore,
     workspaceProvider: input.workspaceProvider,
     provider: input.adapter,

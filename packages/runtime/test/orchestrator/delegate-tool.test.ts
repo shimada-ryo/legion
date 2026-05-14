@@ -83,7 +83,6 @@ function makeHandler(m: ReturnType<typeof makeMocks>) {
   return new DelegateToolHandler({
     workflowInstanceId: 'wf-01',
     parentAgentInstanceId: 'dir-01',
-    parentSessionId: 'dir-sess',
     agentInstanceStore: m.store,
     workspaceProvider: m.workspaceProvider,
     provider: m.provider as never,
