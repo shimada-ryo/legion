@@ -25,4 +25,35 @@ describe('TemplateRegistry', () => {
     await reg.refresh()
     expect(reg.get('nope')).toBeUndefined()
   })
+
+  test('sourcePathOf returns the YAML path for known templates', async () => {
+    const reg = new TemplateRegistry(join(REPO_ROOT, 'workflows'))
+    await reg.refresh()
+    const p = reg.sourcePathOf('feature-implementation')
+    expect(p).toMatch(/feature-implementation\.yaml$/)
+  })
+
+  test('sourcePathOf returns undefined for unknown id', async () => {
+    const reg = new TemplateRegistry(join(REPO_ROOT, 'workflows'))
+    await reg.refresh()
+    expect(reg.sourcePathOf('nope')).toBeUndefined()
+  })
+
+  test('refreshOne reloads a single template from disk', async () => {
+    const reg = new TemplateRegistry(join(REPO_ROOT, 'workflows'))
+    await reg.refresh()
+    const before = reg.get('feature-with-review')!
+    const dir1 = before.nodes.find((n) => n.id === 'director')!
+    expect(dir1.position).toBeUndefined()
+
+    await reg.refreshOne('feature-with-review')
+    const after = reg.get('feature-with-review')!
+    expect(after.id).toBe('feature-with-review')
+  })
+
+  test('refreshOne throws for unknown id', async () => {
+    const reg = new TemplateRegistry(join(REPO_ROOT, 'workflows'))
+    await reg.refresh()
+    await expect(reg.refreshOne('nope')).rejects.toThrow(/unknown template/)
+  })
 })
