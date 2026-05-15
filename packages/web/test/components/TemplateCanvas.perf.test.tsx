@@ -110,16 +110,18 @@ describe('TemplateCanvas perf — parent is not notified during drag', () => {
   })
 
   test('onNodeDragStop notifies the parent exactly once with the diff', () => {
-    let lastOverrides: Record<string, { x: number; y: number }> | null = null
-    let dirtyAtEnd: boolean | null = null
+    const captured: {
+      overrides: Record<string, { x: number; y: number }> | null
+      dirty: boolean | null
+    } = { overrides: null, dirty: null }
     let dirtyCalls = 0
     let positionsCalls = 0
 
     renderWithTheme(
       <TemplateCanvas
         template={TEMPLATE}
-        onDirtyChange={(d) => { dirtyAtEnd = d; dirtyCalls++ }}
-        onPositionsChange={(p) => { lastOverrides = p; positionsCalls++ }}
+        onDirtyChange={(d) => { captured.dirty = d; dirtyCalls++ }}
+        onPositionsChange={(p) => { captured.overrides = p; positionsCalls++ }}
         saveSignal={0}
       />,
     )
@@ -145,21 +147,23 @@ describe('TemplateCanvas perf — parent is not notified during drag', () => {
     // Drag stop — this is the single moment the parent gets notified
     onNodeDragStop!()
 
-    expect(lastOverrides).toEqual({ dir: { x: 300, y: 400 } })
-    expect(dirtyAtEnd).toBe(true)
+    expect(captured.overrides).toEqual({ dir: { x: 300, y: 400 } })
+    expect(captured.dirty).toBe(true)
     expect(dirtyCalls - dBase).toBe(1)
     expect(positionsCalls - pBase).toBe(1)
   })
 
   test('onNodeDragStop with no movement reports empty overrides and dirty=false', () => {
-    let lastOverrides: Record<string, { x: number; y: number }> | null = null
-    let dirtyAtEnd: boolean | null = null
+    const captured: {
+      overrides: Record<string, { x: number; y: number }> | null
+      dirty: boolean | null
+    } = { overrides: null, dirty: null }
 
     renderWithTheme(
       <TemplateCanvas
         template={TEMPLATE}
-        onDirtyChange={(d) => { dirtyAtEnd = d }}
-        onPositionsChange={(p) => { lastOverrides = p }}
+        onDirtyChange={(d) => { captured.dirty = d }}
+        onPositionsChange={(p) => { captured.overrides = p }}
         saveSignal={0}
       />,
     )
@@ -168,7 +172,7 @@ describe('TemplateCanvas perf — parent is not notified during drag', () => {
     expect(typeof onNodeDragStop).toBe('function')
     onNodeDragStop!()
 
-    expect(lastOverrides).toEqual({})
-    expect(dirtyAtEnd).toBe(false)
+    expect(captured.overrides).toEqual({})
+    expect(captured.dirty).toBe(false)
   })
 })
