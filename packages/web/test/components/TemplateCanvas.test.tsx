@@ -64,8 +64,8 @@ describe('TemplateCanvas', () => {
     expect(container.querySelectorAll('[data-id="dir"]').length).toBeGreaterThan(0)
   })
 
-  test('onPositionsChange is called with empty map initially', () => {
-    let captured: Record<string, NodePosition> | undefined
+  test('onPositionsChange is not called on mount (drag-stop is the only trigger)', () => {
+    let captured: Record<string, NodePosition> | null = null
     renderWithProviders(
       <TemplateCanvas
         template={TEMPLATE}
@@ -74,10 +74,10 @@ describe('TemplateCanvas', () => {
         saveSignal={0}
       />,
     )
-    expect(captured).toEqual({})
+    expect(captured).toBeNull()
   })
 
-  test('saveSignal change clears the dirty flag and overrides', () => {
+  test('saveSignal change does not notify the parent (drag-stop is the only trigger)', () => {
     let dirtyCalls: boolean[] = []
     const { rerender } = renderWithProviders(
       <TemplateCanvas
@@ -87,9 +87,8 @@ describe('TemplateCanvas', () => {
         saveSignal={0}
       />,
     )
-    expect(dirtyCalls).toContain(false)
-
     dirtyCalls = []
+
     rerender(
       <ThemeProvider>
         <ReactFlowProvider>
@@ -102,6 +101,9 @@ describe('TemplateCanvas', () => {
         </ReactFlowProvider>
       </ThemeProvider>,
     )
-    expect(dirtyCalls[dirtyCalls.length - 1]).toBe(false)
+
+    // The new pattern only notifies the parent at onNodeDragStop.
+    // Bumping saveSignal alone must not call onDirtyChange.
+    expect(dirtyCalls).toEqual([])
   })
 })
