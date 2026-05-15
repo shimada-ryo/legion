@@ -1,5 +1,4 @@
 import type { WorkflowTemplate, TemplateNode, TemplateEdge, NodePosition } from '@legion/core'
-import type { NodeChange } from '@xyflow/react'
 
 const COL_W = 200
 const ROW_H = 120
@@ -54,28 +53,4 @@ function autoLayout(
     })
   }
   return result
-}
-
-/**
- * Reduce React Flow NodeChange[] into an updated overrides map.
- * Only position changes with a defined position are kept; dimensions /
- * select / drag-start (no position) are ignored.
- */
-export function applyPositionChanges(
-  prev: Record<string, NodePosition>,
-  changes: NodeChange[],
-  _base: Record<string, NodePosition>,
-): Record<string, NodePosition> {
-  let next = prev
-  let copied = false
-  for (const c of changes) {
-    if (c.type !== 'position') continue
-    if (!c.position) continue
-    if (!copied) {
-      next = { ...prev }
-      copied = true
-    }
-    next[c.id] = { x: c.position.x, y: c.position.y }
-  }
-  return next
 }
