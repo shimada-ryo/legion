@@ -5,15 +5,17 @@ import {
   Controls,
   Handle,
   Position,
+  useNodesState,
   type Node,
   type Edge,
   type NodeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import '../styles/react-flow.css'
-import type { WorkflowTemplate, TemplateNode } from '@legion/core'
+import type { WorkflowTemplate, TemplateNode, NodePosition } from '@legion/core'
 import type { AgentInstanceView, BlackboardMessage } from '../types'
 import { useTheme } from '../theme/ThemeProvider'
+import { layoutTemplate } from './template-canvas/layout'
 
 export interface CanvasOverlayProps {
   template: WorkflowTemplate
@@ -38,7 +40,6 @@ const STATUS_BG: Record<string, string> = {
 }
 
 function mergeStatus(a: string | undefined, b: string): string {
-  // running beats everything; failed beats completed; completed beats nothing.
   if (a === 'running' || b === 'running' || a === 'starting' || b === 'starting') return 'running'
   if (a === 'failed' || b === 'failed') return 'failed'
   if (a === 'completed' || b === 'completed') return 'completed'
@@ -105,10 +106,6 @@ interface StatusNodeData extends Record<string, unknown> {
   lastDecision: string | null
 }
 
-/**
- * Custom node renderer that exposes data-status on the wrapper div so tests
- * (and future automation) can assert role coloring without parsing inline styles.
- */
 function StatusNode({ data }: NodeProps<Node<StatusNodeData>>) {
   const bg = data.status ? (STATUS_BG[data.status] ?? 'var(--node-bg)') : 'var(--node-bg)'
   const chip = data.lastDecision ? decisionChipColors(data.lastDecision) : null
@@ -160,11 +157,34 @@ function StatusNode({ data }: NodeProps<Node<StatusNodeData>>) {
 
 const NODE_TYPES = { statusNode: StatusNode }
 
+// Stable default so the prop's identity doesn't flip on every parent render.
+// Without this, `useMemo(..., [blackboardMessages])` would invalidate on each
+// render and the data-patch effect below would loop via setNodes.
+const EMPTY_MESSAGES: BlackboardMessage[] = []
+
+function buildInitialNodes(
+  template: WorkflowTemplate,
+  baseLayout: Record<string, NodePosition>,
+): Node[] {
+  return template.nodes.map((n) => ({
+    id: n.id,
+    type: 'statusNode',
+    position: baseLayout[n.id] ?? { x: 0, y: 0 },
+    data: {
+      label: `${n.id}\n(${n.type})`,
+      status: null,
+      borderColor: NODE_BORDER[n.type] ?? '#888',
+      count: 0,
+      lastDecision: null,
+    } satisfies StatusNodeData,
+  }))
+}
+
 export default function CanvasOverlay({
   template,
   agentInstances,
   onSelectNode,
-  blackboardMessages = [],
+  blackboardMessages = EMPTY_MESSAGES,
 }: CanvasOverlayProps) {
   const roleStatus = useMemo(() => deriveRoleStatus(agentInstances), [agentInstances])
   const roleCount = useMemo(() => deriveRoleCount(agentInstances), [agentInstances])
@@ -172,33 +192,58 @@ export default function CanvasOverlay({
     () => deriveReviewerLastDecision(template, agentInstances, blackboardMessages),
     [template, agentInstances, blackboardMessages],
   )
+  const baseLayout = useMemo(() => layoutTemplate(template), [template])
+  // initialNodes depends on template/baseLayout only. Live data (status, count,
+  // lastDecision) is patched in a separate effect so drag positions are not
+  // reset when agent state changes.
+  const initialNodes = useMemo(
+    () => buildInitialNodes(template, baseLayout),
+    [template, baseLayout],
+  )
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const { resolved } = useTheme()
+
+  // Reset positions on template switch.
+  useEffect(() => {
+    setNodes(initialNodes)
+  }, [initialNodes, setNodes])
+
+  // Patch live data (status / count / lastDecision) without disturbing
+  // positions or object refs for unchanged nodes.
+  useEffect(() => {
+    setNodes((current) =>
+      current.map((cn) => {
+        const tn = template.nodes.find((t) => t.id === cn.id)
+        if (!tn) return cn
+        const newStatus = tn.type === 'role' ? roleStatus.get(cn.id) ?? null : null
+        const newCount = roleCount.get(cn.id) ?? 0
+        const newLastDecision = reviewerLastDecision.get(cn.id) ?? null
+        const oldData = cn.data as StatusNodeData
+        if (
+          oldData.status === newStatus &&
+          oldData.count === newCount &&
+          oldData.lastDecision === newLastDecision
+        ) {
+          return cn
+        }
+        return {
+          ...cn,
+          data: {
+            ...oldData,
+            status: newStatus,
+            count: newCount,
+            lastDecision: newLastDecision,
+          },
+        }
+      }),
+    )
+  }, [roleStatus, roleCount, reviewerLastDecision, template, setNodes])
 
   const [dotColor, setDotColor] = useState('')
   useEffect(() => {
     const cs = getComputedStyle(document.documentElement)
     setDotColor(cs.getPropertyValue('--canvas-grid').trim())
   }, [resolved])
-
-  const nodes = useMemo<Node[]>(
-    () =>
-      template.nodes.map((n, i) => {
-        const status = n.type === 'role' ? roleStatus.get(n.id) : undefined
-        return {
-          id: n.id,
-          type: 'statusNode',
-          position: { x: (i % 4) * 180, y: Math.floor(i / 4) * 100 },
-          data: {
-            label: `${n.id}\n(${n.type})`,
-            status: status ?? null,
-            borderColor: NODE_BORDER[n.type] ?? '#888',
-            count: roleCount.get(n.id) ?? 0,
-            lastDecision: reviewerLastDecision.get(n.id) ?? null,
-          },
-        }
-      }),
-    [template, roleStatus, roleCount, reviewerLastDecision],
-  )
 
   const edges = useMemo<Edge[]>(
     () =>
@@ -218,8 +263,11 @@ export default function CanvasOverlay({
         nodeTypes={NODE_TYPES}
         nodes={nodes}
         edges={edges}
+        onNodesChange={onNodesChange}
         onNodeClick={(_, node) => onSelectNode(node.id)}
         onPaneClick={() => onSelectNode(null)}
+        nodesDraggable={true}
+        nodesConnectable={false}
         fitView
       >
         <Background color={dotColor} />
