@@ -81,6 +81,69 @@ const IMPL_AGENT: AgentInstanceView = {
   endedAt: '',
 }
 
+describe('OverviewTab retry surfacing (#N of M + decision chip)', () => {
+  const makeRev = (id: string, startedAt: string, status = 'completed'): AgentInstanceView => ({
+    id,
+    roleNodeId: 'reviewer',
+    workflowInstanceId: 'wf',
+    sessionId: `sess-${id}`,
+    status,
+    parentAgentInstanceId: 'impl-1',
+    spawnEdgeId: 'implementer→reviewer',
+    workspace: { kind: 'owned', path: '/r' },
+    startedAt,
+    endedAt: '',
+  })
+
+  test('renders Run #1 of 2 / Run #2 of 2 with the matching decision chips', () => {
+    const messages: BlackboardMessage[] = [
+      {
+        id: 'm1', workflowInstanceId: 'wf', topic: 'system.review.decision',
+        publisherAgentId: null, publishedAt: 100,
+        payload: { agentInstanceId: 'rev-1', decision: 'request-changes' },
+      },
+      {
+        id: 'm2', workflowInstanceId: 'wf', topic: 'system.review.decision',
+        publisherAgentId: null, publishedAt: 200,
+        payload: { agentInstanceId: 'rev-2', decision: 'approve' },
+      },
+    ]
+    const { container } = render(
+      <OverviewTab
+        template={REVIEW_TEMPLATE}
+        selectedNodeId="reviewer"
+        agentInstances={[makeRev('rev-2', '2026-05-15T00:00:02Z'), makeRev('rev-1', '2026-05-15T00:00:01Z')]}
+        blackboardMessages={messages}
+      />,
+    )
+    expect(container.textContent).toContain('Run #1 of 2')
+    expect(container.textContent).toContain('Run #2 of 2')
+    // Each Run renders the decision twice (header chip + detail row), so the
+    // four data-decision elements appear in the order
+    // [run1 chip, run1 detail, run2 chip, run2 detail].
+    const decoratedDecisions = Array.from(container.querySelectorAll('[data-decision]'))
+      .map((el) => el.getAttribute('data-decision'))
+      .filter((d): d is string => Boolean(d))
+    expect(decoratedDecisions).toEqual([
+      'request-changes', 'request-changes',
+      'approve', 'approve',
+    ])
+  })
+
+  test('shows Run #1 of 1 (no chip) for a non-reviewer role with one instance', () => {
+    const { container } = render(
+      <OverviewTab
+        template={REVIEW_TEMPLATE}
+        selectedNodeId="implementer"
+        agentInstances={[IMPL_AGENT]}
+        blackboardMessages={[]}
+      />,
+    )
+    expect(container.textContent).toContain('Run #1 of 1')
+    expect(container.querySelector('[data-decision]')).toBeNull()
+  })
+})
+
 describe('OverviewTab Reviewer decision (Phase 3)', () => {
   test('shows Reviewer decision and feedback for a reviewer node', () => {
     const messages: BlackboardMessage[] = [

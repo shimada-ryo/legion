@@ -14,6 +14,13 @@ interface ReviewDecision {
   notes?: string
 }
 
+function decisionChipColors(decision: string): { bg: string; fg: string } {
+  if (decision === 'approve') return { bg: 'var(--status-success)', fg: '#fff' }
+  if (decision === 'request-changes') return { bg: 'var(--status-warning)', fg: '#000' }
+  if (decision === 'reject') return { bg: 'var(--status-error)', fg: '#fff' }
+  return { bg: 'var(--fg-subtle)', fg: '#fff' }
+}
+
 function latestDecisionFor(
   agentInstanceId: string,
   blackboardMessages: BlackboardMessage[],
@@ -43,7 +50,13 @@ export default function OverviewTab({
   const node = template.nodes.find((n) => n.id === selectedNodeId)
   if (!node) return <div>Unknown node.</div>
 
-  const here = agentInstances.filter((a) => a.roleNodeId === selectedNodeId)
+  // Sort spawn instances chronologically so "#1 of N" matches the order in
+  // which the agents were actually started — ULIDs are roughly time-ordered
+  // but startedAt is the authoritative wall-clock.
+  const here = agentInstances
+    .filter((a) => a.roleNodeId === selectedNodeId)
+    .slice()
+    .sort((a, b) => (a.startedAt ?? '').localeCompare(b.startedAt ?? ''))
   const parents = here
     .map((a) => a.parentAgentInstanceId)
     .filter((p): p is string => Boolean(p))
@@ -95,12 +108,31 @@ export default function OverviewTab({
           </>
         )}
       </dl>
-      {here.map((a) => {
+      {here.map((a, i) => {
         const decision = node.type === 'role' && node.role === 'reviewer'
           ? latestDecisionFor(a.id, blackboardMessages)
           : undefined
+        const chip = decision ? decisionChipColors(decision.decision) : undefined
         return (
           <div key={a.id} style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-default)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <strong>Run #{i + 1} of {here.length}</strong>
+              {decision && chip && (
+                <span
+                  data-decision={decision.decision}
+                  style={{
+                    padding: '1px 8px',
+                    borderRadius: 10,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    background: chip.bg,
+                    color: chip.fg,
+                  }}
+                >
+                  {decision.decision}
+                </span>
+              )}
+            </div>
             <div><strong>Agent:</strong> {a.id}</div>
             <div><strong>Status:</strong> {a.status}</div>
             {a.branchName && <div><strong>Branch:</strong> {a.branchName}</div>}

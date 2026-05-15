@@ -27,6 +27,7 @@ export default function InstanceDetail() {
         <CanvasOverlay
           template={data.templateSnapshot}
           agentInstances={data.agentInstances}
+          blackboardMessages={blackboardMessages}
           onSelectNode={setSelectedNodeId}
         />
       </div>
