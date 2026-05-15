@@ -264,3 +264,34 @@ retry 発生時の UI 上の見え方:
 4. テーマを Dark に切替
 5. **期待**: ノード濃紺背景、枠線・エッジは同じ色味、背景ドットが濃 indigo
 6. Controls（左下のズーム）の色がテーマに追従していることを確認
+
+## フロー canvas のノードドラッグ（2026-05-15 追加）
+
+Template canvas でノード位置のドラッグ操作が YAML に永続化される動作確認。Instance canvas は in-session のみ（ディスク永続化なし）。詳細は spec `docs/dev/specs/2026-05-15_web_flow_drag_design.md` を参照。
+
+### 1. Template canvas で drag → Save が永続化されることを確認
+
+1. `LEGION_SCRATCH_REPO` を `legion-playground` に設定して server を起動する（詳細は「毎セッションの起動」セクションを参照）
+2. ブラウザで `/templates/feature-with-review` を開く
+3. ノードをドラッグして適当に動かす
+4. ヘッダに `Unsaved changes` badge が表示されること、タブタイトル先頭に `●` マークが付くことを確認
+5. `Save` ボタンを押す
+6. badge / タブマークが消える
+7. ページをリロード — 直前にドラッグした位置のままレンダリングされること
+8. `workflows/feature-with-review.yaml` を VSCode で開き、`director` などのノードに `position: { x: ..., y: ... }` が flow style で追記されていること、`description: |` ブロックと既存コメントが保たれていることを確認
+
+### 2. Reset と離脱警告の挙動を確認
+
+1. ノードをドラッグ
+2. `Reset` を押す → 位置が元に戻る、badge も消える
+3. もう一度ドラッグして badge を出した状態にする
+4. ブラウザのアドレスバーで他 URL に移動を試みる → ブラウザ標準の確認ダイアログが出る
+5. キャンセル — そのページに留まる
+
+### 3. Instance canvas は in-session のみ
+
+1. workflow を trigger して instance を作る
+2. `/instances/:id` を開く
+3. ノードをドラッグして動かす
+4. ページをリロード → 位置が初期状態に戻ること（in-session の動作確認）
+5. ヘッダに Save ボタンが無いこと
