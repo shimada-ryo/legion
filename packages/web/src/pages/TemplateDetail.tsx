@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getTemplate, triggerWorkflow } from '../api/client'
-import type { WorkflowTemplate } from '@legion/core'
+import { getTemplate, patchTemplatePositions, triggerWorkflow } from '../api/client'
+import type { WorkflowTemplate, NodePosition } from '@legion/core'
 import TemplateCanvas from '../components/TemplateCanvas'
 
 export default function TemplateDetail() {
@@ -10,11 +10,19 @@ export default function TemplateDetail() {
   const [template, setTemplate] = useState<WorkflowTemplate | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
+  // Trigger workflow form state
   const [userPrompt, setUserPrompt] = useState('')
   const [baseRef, setBaseRef] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
+
+  // Drag / Save state
+  const [dirty, setDirty] = useState(false)
+  const [saveSignal, setSaveSignal] = useState(0)
+  const [pending, setPending] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const positionsRef = useRef<Record<string, NodePosition>>({})
 
   useEffect(() => {
     if (!id) return
@@ -22,6 +30,19 @@ export default function TemplateDetail() {
       .then(setTemplate)
       .catch((e) => setLoadError((e as Error).message))
   }, [id])
+
+  useEffect(() => {
+    if (!dirty) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [dirty])
+
+  useEffect(() => {
+    if (!template) return
+    document.title = `${dirty ? '● ' : ''}${template.name} — legion`
+    return () => { document.title = 'legion' }
+  }, [dirty, template])
 
   async function handleTrigger(e: FormEvent) {
     e.preventDefault()
@@ -46,15 +67,78 @@ export default function TemplateDetail() {
     }
   }
 
+  const onSave = async () => {
+    if (!template || pending) return
+    setPending(true)
+    try {
+      const updated = await patchTemplatePositions(template.id, positionsRef.current)
+      setTemplate(updated)
+      setSaveSignal((n) => n + 1)
+      setDirty(false)
+      setSaveError(null)
+    } catch (e) {
+      setSaveError((e as Error).message)
+    }
+    setPending(false)
+  }
+
+  const onReset = () => { setSaveSignal((n) => n + 1); setDirty(false) }
+
   if (loadError) return <div style={{ padding: 16, color: 'var(--status-error)' }}>Error: {loadError}</div>
   if (!template) return <div style={{ padding: 16 }}>Loading…</div>
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ padding: 12, borderBottom: '1px solid var(--border-default)', background: 'var(--bg-surface)' }}>
-        <Link to="/templates" style={{ marginRight: 12 }}>← Templates</Link>
+      <div
+        style={{
+          padding: 12,
+          borderBottom: '1px solid var(--border-default)',
+          background: 'var(--bg-surface)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <Link to="/templates">← Templates</Link>
         <strong>{template.name}</strong>
-        <span style={{ color: 'var(--fg-muted)', marginLeft: 8 }}>({template.id})</span>
+        <span style={{ color: 'var(--fg-muted)' }}>({template.id})</span>
+        {dirty && (
+          <span
+            data-testid="unsaved-badge"
+            style={{
+              fontSize: 11,
+              padding: '2px 8px',
+              borderRadius: 4,
+              background: 'var(--status-warning, #f59e0b)',
+              color: '#fff',
+            }}
+          >
+            Unsaved changes
+          </span>
+        )}
+        {saveError !== null && (
+          <span
+            data-testid="save-error"
+            style={{ fontSize: 12, color: 'var(--status-error)' }}
+          >
+            Save failed: {saveError}
+          </span>
+        )}
+        <span style={{ flex: 1 }} />
+        <button
+          data-testid="reset-btn"
+          disabled={!dirty || pending}
+          onClick={onReset}
+        >
+          Reset
+        </button>
+        <button
+          data-testid="save-btn"
+          disabled={!dirty || pending}
+          onClick={onSave}
+        >
+          {pending ? 'Saving…' : 'Save'}
+        </button>
       </div>
 
       <form
@@ -140,9 +224,9 @@ export default function TemplateDetail() {
       <div style={{ flex: 1, minHeight: 0 }}>
         <TemplateCanvas
           template={template}
-          onDirtyChange={() => {}}
-          onPositionsChange={() => {}}
-          saveSignal={0}
+          onDirtyChange={setDirty}
+          onPositionsChange={(p) => { positionsRef.current = p }}
+          saveSignal={saveSignal}
         />
       </div>
     </div>

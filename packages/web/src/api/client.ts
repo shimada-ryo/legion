@@ -57,3 +57,18 @@ export async function resolveApproval(
   )
   if (!res.ok) throw new Error(`approval: ${res.status}`)
 }
+
+export async function patchTemplatePositions(
+  id: string,
+  positions: Record<string, { x: number; y: number }>,
+): Promise<WorkflowTemplate> {
+  const res = await fetch(`${BASE}/templates/${encodeURIComponent(id)}/positions`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ positions }),
+  })
+  if (!res.ok) {
+    throw new Error(`PATCH ${BASE}/templates/${id}/positions: ${res.status} ${await res.text()}`)
+  }
+  return res.json() as Promise<WorkflowTemplate>
+}
